@@ -1,13 +1,8 @@
 #!/bin/bash
 
-export CMAKE_FLAGS="$CMAKE_FLAGS"
-export CXXFLAGS="$CXXFLAGS"
-
 set -e
-set -o nounset
-set -o pipefail
 
-#export CMAKE_FLAGS="$CMAKE_FLAGS -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL"
+export CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Release $CMAKE_FLAGS"
 
 cd ext
 ./build-eigen.sh

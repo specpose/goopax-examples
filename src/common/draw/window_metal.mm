@@ -65,7 +65,7 @@ sdl_window_metal::sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> siz
         throw;
     }
 #if GOOPAXLIB_DEBUG
-    device = goopax::default_device(env_CPU);
+    device = goopax::default_device(goopax::env_CPU);
 #else
     device = goopax::default_device();
 #endif

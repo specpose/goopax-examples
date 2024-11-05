@@ -1,9 +1,6 @@
 #!/bin/bash
 
-CMAKE_FLAGS="$CMAKE_FLAGS"
 set -e
-set -o nounset
-set -o pipefail
 
 CMAKE_FLAGS="$CMAKE_FLAGS -DBUILD_SHARED_LIBS=0"
 

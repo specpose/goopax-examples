@@ -1,10 +1,11 @@
 #!/bin/bash
 
 set -e
-set -o nounset
-set -o pipefail
 
 PREFIX="$PWD/dist/gmp"
+
+export CFLAGS="$MAKEFILE_CFLAGS"
+export CC="$MAKEFILE_CC"
 
 mkdir -p src
 curl https://gmplib.org/download/gmp/gmp-6.3.0.tar.xz -o src/gmp-6.3.0.tar.xz
@@ -14,8 +15,5 @@ mkdir -p build
 cd build
 tar -xf ../src/gmp-6.3.0.tar.xz
 cd gmp-6.3.0
-./configure --prefix="$PREFIX"
+./configure $MAKEFILE_CONFIGURE_FLAGS --prefix="$PREFIX" --enable-static --disable-shared
 make -j10 install
-#git clone ~/opt/src/git/eigen src/eigen -b 3.4.0
-#cmake -B build/gmp src/gmp -DCMAKE_INSTALL_PREFIX="$PWD/dist/gmp"
-#cmake --build build/gmp --target install

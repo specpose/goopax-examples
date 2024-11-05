@@ -7,12 +7,20 @@ set (CMAKE_CXX_STANDARD 20)
 if (APPLE)
   enable_language(OBJCXX)
   set (CMAKE_OBJCXX_STANDARD 20)
+  include(cmake/common.cmake)
 endif()
 
 # Disabling cuda examples by default because of compatibility issues between cuda and gcc>=13
 option(WITH_CUDA "WITH_CUDA" OFF)
 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH on)
+
+if (ANDROID OR IOS)
+  message("Applying toolchain workaround, so that packages are found.")
+  set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+  set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+  set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+endif()
 
 find_package(goopax REQUIRED)
 find_package(Threads)
@@ -21,18 +29,6 @@ find_package(Boost 1.65.0 COMPONENTS system)
 find_package(SDL2)
 find_package(Eigen3 3.3 NO_MODULE)
 find_package(OpenGL)
-
-
-if (WITH_CUDA)
-  find_package(CUDA)
-  project(goopax_examples LANGUAGES CXX CUDA)
-  set (CMAKE_CUDA_STANDARD 17)
-endif()
-
-
-if (TARGET SDL2::SDL2 AND TARGET Eigen3::Eigen)
-  add_subdirectory(common/draw)
-endif()
 
 find_package(OpenCV)
 if (OpenCV_FOUND)
@@ -50,6 +46,15 @@ if (NOT "${gmp_LIBRARY}" STREQUAL "gmp_LIBRARY-NOTFOUND" AND
   target_include_directories(gmp SYSTEM INTERFACE ${gmp_INCLUDE})
 endif()
 
+if (WITH_CUDA)
+  find_package(CUDA)
+  project(goopax_examples LANGUAGES CXX CUDA)
+  set (CMAKE_CUDA_STANDARD 17)
+endif()
+
+if (TARGET SDL2::SDL2 AND TARGET Eigen3::Eigen)
+  add_subdirectory(common/draw)
+endif()
 
 
 macro(add_withfile P FN)
@@ -73,9 +78,12 @@ macro(add_withfile P FN)
     if (UNIX AND NOT APPLE AND NOT CYGWIN)
       target_link_libraries(${P} -ltbb)
     endif()
+    if (IOS)
+      set_apple_properties(${P})
+    endif()
   else()
     message("not building target ${P} [missing: ${missing}]")
-  endif()  
+  endif()
 endmacro()
 
 macro(add P)
@@ -105,6 +113,10 @@ add(cl-interop-2 OpenCL::OpenCL)
 
 if (APPLE)
   SET_SOURCE_FILES_PROPERTIES( nbody.cpp PROPERTIES LANGUAGE OBJCXX )
+endif()
+
+if (IOS AND TARGET fft)
+  SET_TARGET_PROPERTIES(fft PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${PROJECT_SOURCE_DIR}/ios/fft.plist")
 endif()
 
 if (WITH_CUDA)

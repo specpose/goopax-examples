@@ -8,7 +8,7 @@ using namespace goopax;
 using namespace std;
 using namespace chrono;
 
-PARAM<size_t> MEMSIZE("size", "buffer size in MB");
+PARAMOPT<size_t> MEMSIZE("size", 1000);
 
 void print(const string& s, duration<double> dt)
 {
@@ -22,7 +22,7 @@ int main(int argc, char** argv)
 
     for (goopax_device device : devices())
     {
-        cout << "\nUsing device " << device.name() << endl;
+        cout << "\nUsing device " << device.name() << " with memory size: " << MEMSIZE() << " MB" << endl;
         using T = int;
 
         vector<T> A(MEMSIZE() * (1 << 20) / sizeof(T));
@@ -39,9 +39,9 @@ int main(int argc, char** argv)
                 A[k] = k + LOOP;
             }
 
-            const auto ta = high_resolution_clock::now();
+            const auto ta = steady_clock::now();
             B.copy_from_host(&A[0]);
-            const auto tb = high_resolution_clock::now();
+            const auto tb = steady_clock::now();
             C.copy(B);
             {
                 T tmp;
@@ -49,11 +49,11 @@ int main(int argc, char** argv)
             }
 
             device.wait_all();
-            const auto tc = high_resolution_clock::now();
+            const auto tc = steady_clock::now();
             C.copy_to_host(&D[0]);
-            const auto td = high_resolution_clock::now();
+            const auto td = steady_clock::now();
             std::copy(D.begin(), D.end(), E.begin());
-            const auto te = high_resolution_clock::now();
+            const auto te = steady_clock::now();
 
             print("host -> GPU ", tb - ta);
             print("GPU  -> GPU ", tc - tb);
