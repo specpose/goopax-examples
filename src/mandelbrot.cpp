@@ -1,0 +1,238 @@
+#include "common/draw/window_sdl.h"
+#include <chrono>
+#include <goopax_extra/struct_types.hpp>
+
+using namespace goopax;
+using namespace std;
+using namespace Eigen;
+using goopax::interface::PI;
+using std::chrono::steady_clock;
+
+static const Tuint max_iter = 4096;
+
+template<class D>
+complex<D> calc_c(complex<D> center, D scale, Vector<D, 2> position, auto window_size)
+{
+    // Calculate the value c for a given image point.
+    // This function is called both from within the kernel and from the main function
+    return center
+           + static_cast<D>(scale / window_size[0])
+                 * complex<D>(position[0] - window_size[0] * 0.5f, position[1] - window_size[1] * 0.5f);
+}
+
+static const array<complex<double>, 2> max_allowed_range = { { { -2, -2 }, { 2, 2 } } };
+static complex<double> clamp_range(const complex<double>& x)
+{
+    return { std::clamp(x.real(), max_allowed_range[0].real(), max_allowed_range[1].real()),
+             std::clamp(x.imag(), max_allowed_range[0].imag(), max_allowed_range[1].imag()) };
+}
+
+int main(int, char**)
+{
+    unique_ptr<sdl_window> window =
+        sdl_window::create("mandelbrot", { 640, 480 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+
+    kernel render(window->device,
+                  [](image_resource<2, Vector<Tuint8_t, 4>, true>& image,
+                     const complex<gpu_float> center,
+                     const gpu_float scale) {
+                      gpu_for_global(
+                          0,
+                          image.width() * image.height(),
+                          [&](gpu_uint k) // Parallel loop over all image points
+                          {
+                              Vector<gpu_uint, 2> position = { k % image.width(), k / image.width() };
+
+                              complex<gpu_float> c =
+                                  calc_c(center, scale, position.cast<gpu_float>().eval(), image.dimensions());
+                              complex<gpu_float> z(0, 0);
+
+                              Vector<gpu_float, 4> color = { 0, 0, 0.4, 0 };
+
+                              constexpr unsigned int Nsub = 4;
+
+                              gpu_for(0,
+                                      max_iter,
+                                      Nsub,
+                                      [&](gpu_uint ibase) // Iterative loop over the Mandelbrot Formula
+                                      {
+                                          for (Tuint iadd = 0; iadd < Nsub; ++iadd) // Inner loop to speed up things.
+                                          {
+                                              gpu_uint i = ibase + iadd;
+                                              z = z * z + c; // The core formula of the mandelbrot set
+                                          }
+                                          gpu_if(norm(z) >= 4.f)
+                                          {
+                                              gpu_float c = (ibase + log2(norm(z)));
+                                              color[0] = 0.5f + 0.5f * sin(c);
+                                              color[1] = 0.5f + 0.5f * sin(c + static_cast<float>(PI * 2. / 3));
+                                              color[2] = 0.5f + 0.5f * sin(c + static_cast<float>(PI * 4. / 3));
+
+                                              ibase.gpu_break();
+                                          }
+                                      });
+
+                              image.write(position, color); // Set the color according to the escape time
+                          });
+                  });
+
+    complex<double> moveto = { -0.796570904132624102, 0.183652206054726097 };
+
+    double scale = 2.0;
+
+    complex<double> center = moveto;
+    Tdouble speed_zoom = 1E-2;
+
+    bool quit = false;
+    bool is_fullscreen = false;
+
+    bool fingermotion_active = false;
+    bool too_many_fingers = false;
+    int num_fingers = 0;
+    Vector<float, 2> last_fingermotion;
+
+    auto last_draw_time = steady_clock::now();
+    auto last_fps_time = last_draw_time;
+    unsigned int framecount = 0;
+
+    while (!quit)
+    {
+        while (auto e = window->get_event())
+        {
+            Vector<Tuint, 2> window_size = window->get_size();
+            if (e->type == SDL_QUIT)
+            {
+                quit = true;
+            }
+            else if (e->type == SDL_FINGERDOWN)
+            {
+                ++num_fingers;
+                cout << "num_fingers=" << num_fingers << endl;
+                if (num_fingers == 2)
+                {
+                    too_many_fingers = true;
+                }
+                fingermotion_active = false;
+            }
+            else if (e->type == SDL_FINGERUP)
+            {
+                --num_fingers;
+                cout << "num_fingers=" << num_fingers << endl;
+                if (num_fingers == 0)
+                {
+                    too_many_fingers = false;
+                }
+            }
+
+            else if (e->type == SDL_FINGERMOTION)
+            {
+                cout << "fingermotion. x=" << e->tfinger.x << ", y=" << e->tfinger.y << endl;
+
+                if (fingermotion_active && !too_many_fingers)
+                {
+                    const complex<double> shift =
+                        calc_c(center,
+                               scale,
+                               { e->tfinger.x * window_size[0], e->tfinger.y * window_size[1] },
+                               window_size)
+                        - calc_c(center,
+                                 scale,
+                                 { last_fingermotion[0] * window_size[0], last_fingermotion[1] * window_size[1] },
+                                 window_size);
+                    cout << "shift=" << shift << endl;
+
+                    center -= shift;
+                    moveto -= shift;
+                    center = clamp_range(center);
+                    moveto = clamp_range(moveto);
+                }
+                last_fingermotion = { e->tfinger.x, e->tfinger.y };
+                fingermotion_active = true;
+            }
+
+            else if (e->type == SDL_MOUSEBUTTONDOWN)
+            {
+                int x = 0, y = 0;
+                SDL_GetMouseState(&x, &y);
+                cout << "Mouse button " << e->button.button << ". x=" << x << ", y=" << y << endl;
+
+                if (true)
+                {
+
+                    moveto = calc_c(center,
+                                    scale, // Set new center
+                                    { x, y },
+                                    window_size);
+                    cout.precision(20);
+                    moveto = clamp_range(moveto);
+                    cout << "new center=" << moveto << ", scale=" << scale << endl;
+                }
+            }
+            else if (e->type == SDL_MOUSEWHEEL)
+            {
+                speed_zoom -= e->wheel.y;
+            }
+            else if (e->type == SDL_MULTIGESTURE)
+            {
+                if (fabs(e->mgesture.dDist) > 0.002)
+                {
+                    speed_zoom -= 10 * e->mgesture.dDist;
+                }
+            }
+
+            else if (e->type == SDL_KEYDOWN)
+            {
+                cout << "keydown. sym=" << e->key.keysym.sym << ", name=" << SDL_GetKeyName(e->key.keysym.sym) << endl;
+                switch (e->key.keysym.sym)
+                {
+                    case SDLK_ESCAPE:
+                        quit = true;
+                        break;
+                    case SDLK_f: {
+                        int err = SDL_SetWindowFullscreen(window->window,
+                                                          (is_fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP));
+                        if (err == 0)
+                        {
+                            is_fullscreen = !is_fullscreen;
+                        }
+                        else
+                        {
+                            cerr << "Fullscreen failed: " << SDL_GetError() << endl;
+                        }
+                    }
+                    break;
+                };
+            }
+        }
+
+        auto now = steady_clock::now();
+        auto dt = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_draw_time).count();
+
+        center += (moveto - center) * static_cast<double>(max(0.4, abs(speed_zoom) * 1.1) * dt);
+        scale *= exp(speed_zoom * dt);
+        speed_zoom *= exp(-dt / 10);
+
+        std::array<unsigned int, 2> render_size;
+
+        window->draw_goopax([&](image_buffer<2, Vector<Tuint8_t, 4>, true>& image) {
+            render(image, static_cast<complex<float>>(center), scale);
+            render_size = image.dimensions();
+        });
+
+        ++framecount;
+        if (now - last_fps_time > std::chrono::seconds(1))
+        {
+            stringstream title;
+            auto rate = framecount / std::chrono::duration<double>(now - last_fps_time).count();
+            title << "Mandelbrot: screen resolution=" << render_size[0] << "x" << render_size[1] << ", " << rate
+                  << " fps";
+            string s = title.str();
+            SDL_SetWindowTitle(window->window, s.c_str());
+            framecount = 0;
+            last_fps_time = now;
+        }
+
+        last_draw_time = now;
+    }
+    return 0;
+}

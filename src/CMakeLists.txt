@@ -1,0 +1,116 @@
+cmake_minimum_required(VERSION 3.15)
+
+project(goopax_examples LANGUAGES CXX)
+
+set (CMAKE_CXX_STANDARD 20)
+
+if (APPLE)
+  enable_language(OBJCXX)
+  set (CMAKE_OBJCXX_STANDARD 20)
+endif()
+
+# Disabling cuda examples by default because of compatibility issues between cuda and gcc>=13
+option(WITH_CUDA "WITH_CUDA" OFF)
+
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH on)
+
+find_package(goopax REQUIRED)
+find_package(Threads)
+find_package(OpenCL)
+find_package(Boost 1.65.0 COMPONENTS system)
+find_package(SDL2)
+find_package(Eigen3 3.3 NO_MODULE)
+find_package(OpenGL)
+
+
+if (WITH_CUDA)
+  find_package(CUDA)
+  project(goopax_examples LANGUAGES CXX CUDA)
+  set (CMAKE_CUDA_STANDARD 17)
+endif()
+
+
+if (TARGET SDL2::SDL2 AND TARGET Eigen3::Eigen)
+  add_subdirectory(common/draw)
+endif()
+
+find_package(OpenCV)
+if (OpenCV_FOUND)
+  add_library(opencv INTERFACE)
+  target_link_libraries(opencv INTERFACE ${OpenCV_LIBS})
+  target_include_directories(opencv SYSTEM INTERFACE ${OpenCV_INCLUDE_DIRS})
+endif()
+
+find_library(gmp_LIBRARY NAMES libgmp.a gmp)
+find_path(gmp_INCLUDE NAMES gmp.h)
+if (NOT "${gmp_LIBRARY}" STREQUAL "gmp_LIBRARY-NOTFOUND" AND
+    NOT "${gmp_INCLUDE}" STREQUAL "gmp_INCLUDE-NOTFOUND")
+  add_library(gmp INTERFACE)
+  target_link_libraries(gmp INTERFACE ${gmp_LIBRARY})
+  target_include_directories(gmp SYSTEM INTERFACE ${gmp_INCLUDE})
+endif()
+
+
+
+macro(add_withfile P FN)
+  set(T ${ARGV})
+  list(REMOVE_AT T 0 1)
+  set(missing "")
+  foreach(L ${T})
+    if (NOT TARGET ${L})
+      list(APPEND missing "${L}")
+    endif()
+  endforeach()
+  if ("${missing}" STREQUAL "")
+    message("building target ${P}")
+    add_executable(${P} ${FN})
+    install(TARGETS ${P} DESTINATION bin)
+    
+    foreach(L ${T})
+      target_link_libraries(${P} ${L})
+    endforeach()
+    target_link_libraries(${P} goopax::goopax)
+    if (UNIX AND NOT APPLE AND NOT CYGWIN)
+      target_link_libraries(${P} -ltbb)
+    endif()
+  else()
+    message("not building target ${P} [missing: ${missing}]")
+  endif()  
+endmacro()
+
+macro(add P)
+  set(T ${ARGV})
+  list(REMOVE_AT T 0)
+  add_withfile(${P} ${P}.cpp ${T})
+endmacro()
+
+add(nbody goopax_draw SDL2::SDL2main)
+if (TARGET nbody)
+  target_include_directories(nbody SYSTEM PRIVATE "common/draw/ext/glatter/include")
+endif()
+
+add(deep-zoom-mandelbrot gmp Boost::system goopax_draw SDL2::SDL2main)
+add(gather)
+add(mandelbrot goopax_draw SDL2::SDL2main)
+add(fft opencv goopax_draw SDL2::SDL2main)
+add(svm-pingpong)
+add(memory-transfer)
+add(pi)
+add(simple)
+add(race-condition)
+add(helloworld)
+add(matmul Eigen3::Eigen)
+add(cl-interop-1 OpenCL::OpenCL)
+add(cl-interop-2 OpenCL::OpenCL)
+
+if (APPLE)
+  SET_SOURCE_FILES_PROPERTIES( nbody.cpp PROPERTIES LANGUAGE OBJCXX )
+endif()
+
+if (WITH_CUDA)
+  add_executable(cuda-interop cuda-interop.cu)
+  target_link_libraries(cuda-interop goopax::goopax)
+  if (UNIX AND NOT APPLE AND NOT CYGWIN)
+    target_link_libraries(cuda-interop -ltbb)
+  endif()
+endif()

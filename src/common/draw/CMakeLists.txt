@@ -1,0 +1,23 @@
+option(GOOPAXLIB_DEBUG "GOOPAXLIB_DEBUG" OFF)
+
+if (APPLE)
+  add_library(goopax_draw window_sdl.cpp window_gl.cpp window.cpp window_sdl.h window_gl.h window.h window_metal.h window_metal.mm)
+else()
+  add_library(goopax_draw window_sdl.cpp window_gl.cpp window.cpp window_sdl.h window_gl.h window.h)
+endif()
+
+target_include_directories(goopax_draw SYSTEM PRIVATE "ext/glatter/include")
+target_link_libraries(goopax_draw PUBLIC SDL2::SDL2)
+if (NOT APPLE)
+  if (NOT WIN32)
+    target_link_libraries(goopax_draw PUBLIC -lX11)
+  endif()
+  target_link_libraries(goopax_draw PUBLIC OpenGL::GLU)
+endif()
+target_link_libraries(goopax_draw PUBLIC goopax::goopax Eigen3::Eigen)
+
+if (GOOPAXLIB_DEBUG)
+  target_compile_definitions(goopax_draw PUBLIC -DGOOPAXLIB_DEBUG=1)
+else()
+  target_compile_definitions(goopax_draw PUBLIC -DGOOPAXLIB_DEBUG=0)
+endif()
