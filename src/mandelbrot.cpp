@@ -8,8 +8,6 @@ using namespace Eigen;
 using goopax::interface::PI;
 using std::chrono::steady_clock;
 
-static const Tuint max_iter = 4096;
-
 template<class D>
 complex<D> calc_c(complex<D> center, D scale, Vector<D, 2> position, auto window_size)
 {
@@ -36,44 +34,42 @@ int main(int, char**)
                   [](image_resource<2, Vector<Tuint8_t, 4>, true>& image,
                      const complex<gpu_float> center,
                      const gpu_float scale) {
-                      gpu_for_global(
-                          0,
-                          image.width() * image.height(),
-                          [&](gpu_uint k) // Parallel loop over all image points
-                          {
-                              Vector<gpu_uint, 2> position = { k % image.width(), k / image.width() };
+                      gpu_for_global(0,
+                                     image.width() * image.height(),
+                                     [&](gpu_uint k) // Parallel loop over all image points
+                                     {
+                                         Vector<gpu_uint, 2> position = { k % image.width(), k / image.width() };
 
-                              complex<gpu_float> c =
-                                  calc_c(center, scale, position.cast<gpu_float>().eval(), image.dimensions());
-                              complex<gpu_float> z(0, 0);
+                                         complex<gpu_float> c = calc_c(
+                                             center, scale, position.cast<gpu_float>().eval(), image.dimensions());
+                                         complex<gpu_float> z(0, 0);
 
-                              Vector<gpu_float, 4> color = { 0, 0, 0.4, 0 };
+                                         static constexpr unsigned int max_iter = 4096;
+                                         gpu_uint iter = 0;
 
-                              constexpr unsigned int Nsub = 4;
+                                         // As soon as norm(z) >= 4, z is destined to diverge to inf. Delaying
+                                         // until 10.f to make colors a bit smoother.
+                                         gpu_while(iter < max_iter && norm(z) < 10.f)
+                                         {
+                                             for (int k = 0; k < 4; ++k) // Inner loop to speed up things.
+                                             {
+                                                 z = z * z + c; // The core formula of the mandelbrot set
+                                                 ++iter;
+                                             }
+                                         }
 
-                              gpu_for(0,
-                                      max_iter,
-                                      Nsub,
-                                      [&](gpu_uint ibase) // Iterative loop over the Mandelbrot Formula
-                                      {
-                                          for (Tuint iadd = 0; iadd < Nsub; ++iadd) // Inner loop to speed up things.
-                                          {
-                                              gpu_uint i = ibase + iadd;
-                                              z = z * z + c; // The core formula of the mandelbrot set
-                                          }
-                                          gpu_if(norm(z) >= 4.f)
-                                          {
-                                              gpu_float c = (ibase + log2(norm(z)));
-                                              color[0] = 0.5f + 0.5f * sin(c);
-                                              color[1] = 0.5f + 0.5f * sin(c + static_cast<float>(PI * 2. / 3));
-                                              color[2] = 0.5f + 0.5f * sin(c + static_cast<float>(PI * 4. / 3));
+                                         Vector<gpu_float, 4> color = { 0, 0, 0.4, 0 };
 
-                                              ibase.gpu_break();
-                                          }
-                                      });
+                                         gpu_if(norm(z) >= 4.f)
+                                         {
+                                             gpu_float x = (iter - log2(log2(norm(z)))) * 0.1f;
+                                             color[0] = 0.5f + 0.5f * sin(x);
+                                             color[1] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 2. / 3));
+                                             color[2] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 4. / 3));
+                                         }
 
-                              image.write(position, color); // Set the color according to the escape time
-                          });
+                                         image.write(position, color); // Set the color according to the escape time
+                                     });
                   });
 
     complex<double> moveto = { -0.796570904132624102, 0.183652206054726097 };
