@@ -222,8 +222,7 @@ int main(int, char**)
             auto rate = framecount / std::chrono::duration<double>(now - last_fps_time).count();
             title << "Mandelbrot: screen resolution=" << render_size[0] << "x" << render_size[1] << ", " << rate
                   << " fps";
-            string s = title.str();
-            SDL_SetWindowTitle(window->window, s.c_str());
+            window->set_title(title.str());
             framecount = 0;
             last_fps_time = now;
         }

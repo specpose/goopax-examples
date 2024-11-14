@@ -6,6 +6,7 @@
 using namespace goopax;
 using namespace std;
 using namespace Eigen;
+using goopax::interface::PI;
 using std::chrono::duration;
 using std::chrono::steady_clock;
 
@@ -73,7 +74,7 @@ complex<REAL> moveto = {
          "9812469373640793642356376154715067642695987014146996961508736162323693119329311610190435137")
 };
 
-pair<double, double> scalerange = { 5e-3, 2E-70 };
+pair<double, double> scalerange = { 2, 2E-67 };
 
 double deltat = 92;
 bool manual_mode = false;
@@ -105,10 +106,12 @@ public:
                 const complex<Tfloat> center_offset_m,
                 goopax_future<pair_firstsort<float, complex<float>>>& best_dc_m,
                 goopax_future<uint>& want_more)>
-        Kernel; // Kernel code goes into this function
+        Kernel;
 
     void set_z0()
     {
+        // Compute high precision reference data for single point c0.
+
         if (z_centervals.size() < MAX_ITER)
         {
             z_centervals = buffer<complex<Tfloat>>(window->device, MAX_ITER);
@@ -140,29 +143,6 @@ public:
             --force_c0_count;
     }
 
-    static Vector<gpu_float, 4> color(const gpu_uint e,
-                                      gpu_uint max_iter) // The color palette is outsourced into this function
-    {
-        const Vector<gpu_float, 4> c1 = { 0xb0, 0xbc, 0x3d, 0xff }; // desired RGB colors
-        const Vector<gpu_float, 4> c2 = { 0x7e, 0x92, 0x6d, 0xff };
-        const Vector<gpu_float, 4> c3 = { 0x44, 0x62, 0x61, 0xff };
-        Vector<gpu_float, 4> ret;
-
-        {
-            const Vector<gpu_float, 4> d1 = (c1 - c2 / 64 - c3 / 64) / 255; // Adjusting colors
-            const Vector<gpu_float, 4> d2 = (c2 - c1 / 64 - c3 / 64) / 255;
-            const Vector<gpu_float, 4> d3 = (c3 - c1 / 64 - c2 / 64) / 255;
-
-            gpu_float f = e / 256.0f;
-
-            ret = d1 * pow<4, 1>(sinpi(f)) + d2 * pow<4, 1>(sinpi(f - 1.0f / 3)) + d3 * pow<6, 1>(sinpi(f - 2.0f / 3));
-
-            ret *= cond(e == max_iter - 1, 0, min(f * 2 + 0.2f, 1));
-        }
-        ret[3] = 1;
-        return ret;
-    }
-
     void render()
     {
         static auto frametime = steady_clock::now();
@@ -180,8 +160,7 @@ public:
             title << "Mandelbrot: screen size=" << fbsize[0] << "x" << fbsize[1] << ", " << rate
                   << " fps, scale=" << scale << ", max_iter=" << MAX_ITER;
 
-            string s = title.str();
-            SDL_SetWindowTitle(window->window, s.c_str());
+            window->set_title(title.str());
             framecount = 0;
             frametime = now;
         }
@@ -265,84 +244,79 @@ public:
                          gpu_uint max_iter,
                          const resource<complex<Tfloat>>& z_centervals,
                          const complex<gpu_float> center_offset_m,
-                         gather<pair_firstsort<Tfloat, complex<Tfloat>>, ::op_min>& best_dc_m,
-                         gather_add<Tuint>& want_more) // Kernel code goes into this function
-                      {
+                         gather<pair_firstsort<float, complex<float>>, ::op_min>& best_dc,
+                         gather_add<uint>& want_more) {
                           auto& zc = z_centervals;
-                          best_dc_m.first = 1E10f;
+                          best_dc.first = 1E10f;
+                          best_dc.second = numeric_limits<float>::quiet_NaN();
                           want_more = 0;
 
                           gpu_for_global(
                               0,
                               image.width() * image.height(),
-                              num_subthreads(),
                               [&](gpu_uint k) // Parallel loop over all image points
                               {
-                                  vector<complex<gpu_float>> dc_m(num_subthreads());
-                                  for (Tuint t = 0; t < num_subthreads(); ++t)
-                                  {
-                                      dc_m[t] = calc_c<gpu_float>(
-                                          center_offset_m,
-                                          scale_m,
-                                          Vector<gpu_float, 2>{ (k + t) % image.width(), (k + t) / image.width() },
-                                          image.dimensions());
-                                  }
-                                  auto dc_m_orig = dc_m;
-                                  vector<complex<gpu_float>> dz_m(num_subthreads(), complex<gpu_float>(0, 0));
-                                  vector<gpu_uint> e(num_subthreads(), 0);
-                                  vector<gpu_uint> shift(num_subthreads(), scale_exp);
+                                  Vector<gpu_uint, 2> position = { k % image.width(), k / image.width() };
+                                  complex<gpu_float> dc = calc_c<gpu_float>(
+                                      center_offset_m, scale_m, position.cast<gpu_float>().eval(), image.dimensions());
+
+                                  complex<gpu_float> dc_orig = dc;
+                                  complex<gpu_float> dz(0, 0);
+                                  complex<gpu_float> z(0, 0);
+
+                                  // The aim of the shift/scalefac variables is to prevent underflow when
+                                  // floating point numbers get very small.
+                                  gpu_uint shift = scale_exp;
 
                                   gpu_float maxz = 0;
-                                  gpu_for(0, max_iter, 16, [&](gpu_uint ibase) {
-                                      vector<gpu_float> scalefac(num_subthreads());
-                                      for (Tuint t = 0; t < num_subthreads(); ++t)
-                                      {
-                                          gpu_uint s2u = reinterpret<Tuint>(1.f);
-                                          s2u -= shift[t] << 23;
-                                          auto scale2 = reinterpret<gpu_float>(s2u);
+                                  gpu_uint iter = 0;
 
-                                          scalefac[t] = cond(shift[t] >= 127u, 0, (gpu_float)scale2);
-                                      }
-                                      gpu_for(ibase, ibase + 16, [&](gpu_uint i) {
-                                          for (Tuint t = 0; t < num_subthreads(); ++t)
-                                          {
-                                              e[t] = cond(norm(zc[i] + dz_m[t] * scalefac[t]) < 4.f, i, e[t]);
-                                              if (t == 0)
-                                                  maxz = max(maxz, (gpu_float)norm(zc[i] + dz_m[t] * scalefac[t]));
-                                              dz_m[t] = zc[i] * dz_m[t] * gpu_float(2) + dz_m[t] * dz_m[t] * scalefac[t]
-                                                        + dc_m[t]; // The core formula of the mandelbrot set
-                                              gpu_while(norm(dz_m[t]) > 1 && shift[t] != 0)
-                                              {
-                                                  dz_m[t] = dz_m[t] * gpu_float(0.5f);
-                                                  dc_m[t] = dc_m[t] * gpu_float(0.5f);
-                                                  --shift[t];
-                                                  scalefac[t] *= 2;
-                                              }
-                                          }
-                                      });
-                                      auto maxe = e[0];
-                                      for (Tuint k = 1; k < e.size(); ++k)
-                                      {
-                                          maxe = max(maxe, e[k]);
-                                      }
-                                      gpu_if(maxe != ibase + 15) ibase.gpu_break();
-                                  });
-                                  for (Tuint t = 0; t < num_subthreads(); ++t)
+                                  // As soon as norm(z) >= 4, z is destined to diverge to inf. Delaying
+                                  // until 10.f to make colors a bit smoother.
+                                  gpu_while(iter < max_iter && norm(z) < 10.f)
                                   {
-                                      gpu_uint y = (k + t) / image.width();
-                                      gpu_uint x = (k + t) % image.width();
+                                      gpu_uint s2u = reinterpret<Tuint>(1.f);
+                                      s2u -= shift << 23;
+                                      auto scale2 = reinterpret<gpu_float>(s2u);
+                                      gpu_float scalefac = cond(shift >= 127u, 0, (gpu_float)scale2);
 
-                                      Vector<gpu_float, 4> c = color(e[t], max_iter);
+                                      z = zc[iter] + dz * scalefac;
+                                      maxz = max(maxz, (gpu_float)norm(zc[iter] + dz * scalefac));
 
-                                      image.write({ x, y }, c); // Set the color according to the escape time
-                                      want_more += gpu_uint(e[t] + 256 > max_iter * 0.7f && e[t] != max_iter - 1);
+                                      // The core formula of the mandelbrot set, computed as deviation from
+                                      // the reference point (z = z0 + dz).
+                                      dz = zc[iter] * dz * gpu_float(2) + dz * dz * scalefac + dc;
+
+                                      gpu_while(norm(dz) > 1 && shift != 0)
+                                      {
+                                          dz = dz * gpu_float(0.5f);
+                                          dc = dc * gpu_float(0.5f);
+                                          --shift;
+                                          scalefac *= 2;
+                                      }
+                                      ++iter;
                                   }
-                                  gpu_float value =
-                                      cond(e[0] == max_iter - 1, -(gpu_float)e[0] + maxz - 10, -(gpu_float)e[0]);
-                                  gpu_if(value < best_dc_m.first)
+
+                                  Vector<gpu_float, 4> color = { 0, 0, 0.4, 0 };
+
+                                  gpu_if(norm(z) >= 4.f)
                                   {
-                                      best_dc_m.first = value;
-                                      best_dc_m.second = dc_m_orig[0];
+                                      gpu_float x = (iter - log2(log2(norm(z)))) * 0.1f;
+                                      color[0] = 0.5f + 0.5f * sin(x);
+                                      color[1] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 2. / 3));
+                                      color[2] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 4. / 3));
+                                  }
+
+                                  image.write(position, color); // Set the color according to the escape time
+
+                                  want_more += gpu_uint(iter + 256 > max_iter * 0.7f && iter != max_iter);
+
+                                  gpu_float value =
+                                      cond(iter == max_iter, -(gpu_float)iter + maxz - 10, -(gpu_float)iter);
+                                  gpu_if(value < best_dc.first)
+                                  {
+                                      best_dc.first = value;
+                                      best_dc.second = dc_orig;
                                   }
                               });
                       });
