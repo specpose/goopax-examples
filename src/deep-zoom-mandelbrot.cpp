@@ -81,19 +81,15 @@ bool manual_mode = false;
 
 realN<10> scale = 2.4161963835763931682e-3;
 
-complex<REAL> force_c0 = moveto;
-Tuint force_c0_count = 1000000000;
-
 complex<REAL> center = moveto;
 double speed_zoom = 1E-2;
 auto mandelbrot_lasttime = steady_clock::now();
 auto mandelbrot_timebegin = steady_clock::now();
 
-static complex<REAL> c0_try = { 0, 0 };
-static complex<REAL> c0 = { 0, 0 };
-
 class mandelbrot
 {
+    complex<REAL> c0 = { 0, 0 };
+
 public:
     buffer<complex<Tfloat>> z_centervals;
     Tuint size_centervals = 0;
@@ -116,31 +112,18 @@ public:
         {
             z_centervals = buffer<complex<Tfloat>>(window->device, MAX_ITER);
         }
-        buffer_map<complex<Tfloat>> z_centervalsMap(z_centervals, BUFFER_WRITE | BUFFER_DISCARD);
 
-        complex<REAL> oldc = c0;
-        c0 += c0_try;
-
-        if (force_c0_count != 0)
+        buffer_map<complex<Tfloat>> z_centervalsMap(z_centervals, 0, MAX_ITER, BUFFER_WRITE_DISCARD);
+        complex<REAL> zc = { 0, 0 };
+        for (Tuint k = 0; k < MAX_ITER; ++k)
         {
-            c0 = force_c0;
-        }
-
-        if (c0 != oldc || MAX_ITER > size_centervals)
-        {
-            complex<REAL> zc = { 0, 0 };
-            for (Tuint k = 0; k < MAX_ITER; ++k)
+            z_centervalsMap[k] = complex_cast<Tfloat>(zc);
+            if (norm(zc) < 1E10)
             {
-                z_centervalsMap[k] = complex_cast<Tfloat>(zc);
-                if (norm(zc) < 1E10)
-                {
-                    zc = zc * zc + c0;
-                }
+                zc = zc * zc + c0;
             }
-            size_centervals = MAX_ITER;
         }
-        if (force_c0_count)
-            --force_c0_count;
+        size_centervals = MAX_ITER;
     }
 
     void render()
@@ -214,8 +197,9 @@ public:
 
             if (best_dc.get().first != Tfloat(1E10f))
             {
-                c0_try = static_cast<complex<REAL>>(best_dc.get().second)
-                         * static_cast<REAL>(pow((REAL)0.5, unrange(shift)));
+                // Shifting reference point to the best prospect.
+                c0 += static_cast<complex<REAL>>(best_dc.get().second)
+                      * static_cast<REAL>(pow((REAL)0.5, unrange(shift)));
             }
         }
         if (true)
@@ -411,7 +395,6 @@ int main(int argc, char** argv)
                     cout << "new center=" << moveto;
                     cout.precision(10);
                     cout << ", scale=" << scale << endl;
-                    force_c0_count = 0;
                     manual_mode = true;
                 }
             }
