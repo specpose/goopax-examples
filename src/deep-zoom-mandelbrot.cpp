@@ -309,8 +309,9 @@ public:
 
 int main(int argc, char** argv)
 {
-    shared_ptr<sdl_window> window = sdl_window::create(
-        "deep zoom mandelbrot", Eigen::Vector<Tuint, 2>{ 640, 480 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+    shared_ptr<sdl_window> window = sdl_window::create("deep zoom mandelbrot",
+                                                       Eigen::Vector<Tuint, 2>{ 640, 480 },
+                                                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
     using namespace boost::multiprecision;
 
@@ -329,11 +330,11 @@ int main(int argc, char** argv)
         while (auto e = window->get_event())
         {
             Vector<unsigned int, 2> window_size = window->get_size().cast<unsigned int>();
-            if (e->type == SDL_QUIT)
+            if (e->type == SDL_EVENT_QUIT)
             {
                 quit = true;
             }
-            else if (e->type == SDL_FINGERDOWN)
+            else if (e->type == SDL_EVENT_FINGER_DOWN)
             {
                 ++num_fingers;
                 cout << "num_fingers=" << num_fingers << endl;
@@ -343,7 +344,7 @@ int main(int argc, char** argv)
                 }
                 fingermotion_active = false;
             }
-            else if (e->type == SDL_FINGERUP)
+            else if (e->type == SDL_EVENT_FINGER_UP)
             {
                 --num_fingers;
                 cout << "num_fingers=" << num_fingers << endl;
@@ -353,7 +354,7 @@ int main(int argc, char** argv)
                 }
             }
 
-            else if (e->type == SDL_FINGERMOTION)
+            else if (e->type == SDL_EVENT_FINGER_MOTION)
             {
                 cout << "fingermotion. x=" << e->tfinger.x << ", y=" << e->tfinger.y << endl;
 
@@ -378,9 +379,9 @@ int main(int argc, char** argv)
                 fingermotion_active = true;
             }
 
-            else if (e->type == SDL_MOUSEBUTTONDOWN)
+            else if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
             {
-                int x = 0, y = 0;
+                float x = 0, y = 0;
                 SDL_GetMouseState(&x, &y);
                 cout << "Mouse button " << e->button.button << ". x=" << x << ", y=" << y << endl;
 
@@ -398,20 +399,22 @@ int main(int argc, char** argv)
                     manual_mode = true;
                 }
             }
-            else if (e->type == SDL_MOUSEWHEEL)
+            else if (e->type == SDL_EVENT_MOUSE_WHEEL)
             {
                 speed_zoom -= e->wheel.y;
                 manual_mode = true;
             }
-            else if (e->type == SDL_MULTIGESTURE)
-            {
-                if (fabs(e->mgesture.dDist) > 0.002)
+            /*
+              else if (e->type == SDL_MULTIGESTURE)
                 {
-                    speed_zoom -= 10 * e->mgesture.dDist;
+                    if (fabs(e->mgesture.dDist) > 0.002)
+                    {
+                        speed_zoom -= 10 * e->mgesture.dDist;
+                    }
                 }
-            }
+            */
 
-            else if (e->type == SDL_KEYDOWN)
+            else if (e->type == SDL_EVENT_KEY_DOWN)
             {
                 cout << "keydown. sym=" << e->key.keysym.sym << ", name=" << SDL_GetKeyName(e->key.keysym.sym) << endl;
                 switch (e->key.keysym.sym)

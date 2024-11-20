@@ -12,7 +12,6 @@ struct common_window
     virtual Eigen::Vector<Tuint, 2> get_size() const = 0;
     virtual std::optional<SDL_Event> get_event() = 0;
     virtual std::optional<SDL_Event> wait_event() = 0;
-    virtual void draw(std::function<void(Eigen::Vector<Tuint, 2>, Tuint* p)> func) = 0;
 
 protected:
     virtual void

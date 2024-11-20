@@ -1,4 +1,5 @@
 #include "window_metal.h"
+#include <SDL3/SDL_render.h>
 
 std::unique_ptr<sdl_window> create_sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
 {
@@ -36,20 +37,22 @@ sdl_window_metal::sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> siz
 {
     try
     {
-        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
-        {
-            SDL_RendererInfo info;
-            int err = SDL_GetRendererInfo(renderer, &info);
-            if (err == 0)
-            {
-                std::cout << "renderer: name=" << info.name << ", max width=" << info.max_texture_width
-                          << ", max height=" << info.max_texture_height << ", flags=" << info.flags << std::endl;
-            }
-            else
-            {
-                std::cerr << "Got some error while calling SDL_GetRendererInfo." << std::endl;
-            }
-        }
+        renderer = SDL_CreateRenderer(window, -1);
+        /*        {
+                    SDL_RendererInfo info;
+                    int err = SDL_GetRendererInfo(renderer, &info);
+                    if (err == 0)
+                    {
+                        std::cout << "renderer: name=" << info.name << ", max width=" << info.max_texture_width
+                                  << ", max height=" << info.max_texture_height << ", flags=" << info.flags <<
+           std::endl;
+                    }
+                    else
+                    {
+                        std::cerr << "Got some error while calling SDL_GetRendererInfo." << std::endl;
+                    }
+                }
+         */
         swapchain = (__bridge CAMetalLayer*)SDL_RenderGetMetalLayer(renderer);
         if (swapchain == nullptr)
         {

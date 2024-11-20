@@ -1,9 +1,9 @@
 option(GOOPAXLIB_DEBUG "GOOPAXLIB_DEBUG" OFF)
 
 if (APPLE)
-  add_library(goopax_draw window_sdl.cpp window_gl.cpp window.cpp window_sdl.h window_gl.h window.h window_metal.h window_metal.mm)
+  add_library(goopax_draw window_sdl.cpp window.cpp window_sdl.h window.h window_metal.h window_metal.mm)
 else()
-  add_library(goopax_draw window_sdl.cpp window_gl.cpp window.cpp window_sdl.h window_gl.h window.h)
+  add_library(goopax_draw window_sdl.cpp window.cpp window_sdl.h window.h)
 endif()
 
 target_include_directories(goopax_draw SYSTEM PRIVATE "ext/glatter/include")
