@@ -1,7 +1,7 @@
 #pragma once
 
 #include "types.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <optional>
 
 struct common_window

@@ -3,7 +3,7 @@
 set -e
 
 export goopax_DIR="$PWD/.."
-export SDL2_DIR=ext/dist/sdl2
+export SDL3_DIR=ext/dist/sdl3
 export Eigen3_DIR=ext/dist/eigen
 export OpenCV_DIR=ext/dist/opencv
 export Boost_DIR=ext/dist/boost

@@ -200,13 +200,13 @@ int main(int argc, char** argv)
 
         while (auto e = window->get_event())
         {
-            if (e->type == SDL_QUIT)
+            if (e->type == SDL_EVENT_QUIT)
             {
                 quit = true;
             }
-            else if (e->type == SDL_KEYDOWN)
+            else if (e->type == SDL_EVENT_KEY_DOWN)
             {
-                switch (e->key.keysym.sym)
+                switch (e->key.key)
                 {
                     case SDLK_ESCAPE:
                         quit = true;

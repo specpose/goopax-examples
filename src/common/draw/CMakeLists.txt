@@ -7,7 +7,7 @@ else()
 endif()
 
 target_include_directories(goopax_draw SYSTEM PRIVATE "ext/glatter/include")
-target_link_libraries(goopax_draw PUBLIC SDL2::SDL2)
+target_link_libraries(goopax_draw PUBLIC SDL3::SDL3)
 if (NOT APPLE)
   if (NOT WIN32)
     target_link_libraries(goopax_draw PUBLIC -lX11)

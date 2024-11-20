@@ -114,7 +114,7 @@ public:
     {
         if (context != nullptr)
         {
-            SDL_GL_DeleteContext(context);
+            SDL_GL_DestroyContext(context);
             context = nullptr;
         }
     }

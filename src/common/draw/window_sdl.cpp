@@ -23,7 +23,7 @@ void sdl_window::draw(std::function<void(Vector<Tuint, 2>, Tuint* p)> func)
     {
         if (surface != nullptr)
         {
-            SDL_FreeSurface(surface);
+            SDL_DestroySurface(surface);
             surface = nullptr;
         }
         surface = nullptr;
@@ -105,8 +105,8 @@ sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags)
     std::atexit([]() { SDL_Quit(); });
 
     window = SDL_CreateWindow(name,                    // window title
-                              SDL_WINDOWPOS_UNDEFINED, // initial x position
-                              SDL_WINDOWPOS_UNDEFINED, // initial y position
+    //                          SDL_WINDOWPOS_UNDEFINED, // initial x position
+    //                          SDL_WINDOWPOS_UNDEFINED, // initial y position
                               size[0],                 // width, in pixels
                               size[1],                 // height, in pixels
                               flags                    // SDL_WINDOW_OPENGL                  // flags - see below
@@ -121,7 +121,7 @@ sdl_window::~sdl_window()
 {
     if (surface != nullptr)
     {
-        SDL_FreeSurface(surface);
+        SDL_DestroySurface(surface);
         surface = nullptr;
     }
     if (window != nullptr)

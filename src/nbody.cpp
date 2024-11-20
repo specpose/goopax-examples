@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     const double dt = 5E-3;
 
     unique_ptr<sdl_window> window =
-        sdl_window::create("nbody", { 1024, 768 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+        sdl_window::create("nbody", { 1024, 768 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     goopax_device device = window->device;
 
 #if USE_METAL
@@ -98,20 +98,20 @@ int main(int argc, char** argv)
     {
         while (auto e = window->get_event())
         {
-            if (e->type == SDL_QUIT)
+            if (e->type == SDL_EVENT_QUIT)
             {
                 quit = true;
             }
-            else if (e->type == SDL_KEYDOWN)
+            else if (e->type == SDL_EVENT_KEY_DOWN)
             {
-                switch (e->key.keysym.sym)
+                switch (e->key.key)
                 {
                     case SDLK_ESCAPE:
                         quit = true;
                         break;
-                    case SDLK_f: {
+                    case SDLK_F: {
                         int err = SDL_SetWindowFullscreen(window->window,
-                                                          (is_fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP));
+                                                          (is_fullscreen ? false : true));
                         if (err == 0)
                         {
                             is_fullscreen = !is_fullscreen;
