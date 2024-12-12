@@ -62,7 +62,7 @@ int main()
 {
     goopax_device device = default_device(env_CL);
 
-    buffer<int> A(device, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
+    buffer<int> A(device, std::vector{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 });
 
     cout << "\noriginal buffer:" << endl << A << endl;
 

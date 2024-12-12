@@ -1,14 +1,10 @@
 #pragma once
 
-#ifdef __APPLE__
-#define USE_METAL 1
-#else
-#define USE_METAL 0
+#if WITH_METAL
+#include "draw/window_metal.h"
 #endif
 
-#if USE_METAL
-#include "draw/window_metal.h"
-#else
+#if WITH_OPENGL
 #include "draw/window_gl.h"
 #ifdef __linux__
 #include <GL/glx.h>
@@ -18,10 +14,10 @@
 #else
 #include <glatter/glatter.h>
 #endif
-#include <goopax_gl>
+#include <goopax>
 #endif
 
-#if USE_METAL
+#if WITH_METAL
 
 struct particle_renderer
 {
@@ -109,13 +105,88 @@ struct particle_renderer
     }
 };
 
+#endif
+
+#if WITH_OPENGL
+
+struct gl_object
+{
+    unsigned int gl_id;
+    bool alive = true;
+
+    inline gl_object() = default;
+    gl_object(const gl_object&) = delete;
+    gl_object& operator=(const gl_object&) = delete;
+    inline gl_object(gl_object&& b)
+        : gl_id(b.gl_id)
+    {
+        b.alive = false;
+    }
+    inline gl_object& operator=(gl_object&& b)
+    {
+        gl_id = b.gl_id;
+        b.alive = false;
+        return *this;
+    }
+};
+
+struct gl_buffer : public gl_object
+{
+    gl_buffer(size_t size)
+    {
+        glGenBuffers(1, &gl_id);
+        glBindBuffer(GL_ARRAY_BUFFER, gl_id);
+
+        // buffer data
+        glBufferData(GL_ARRAY_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    ~gl_buffer()
+    {
+        if (alive)
+            glDeleteBuffers(1, &gl_id);
+    }
+
+#ifdef _MSC_VER
+    gl_buffer(gl_buffer&& b)
+        : gl_object(std::move(b))
+    {
+    }
+    gl_buffer& operator=(gl_buffer&& b)
+    {
+        gl_object::operator=(std::move(b));
+        return *this;
+    }
 #else
+    gl_buffer(gl_buffer&&) = default;
+    gl_buffer& operator=(gl_buffer&&) = default;
+#endif
+};
+
+template<class T>
+struct opengl_buffer
+    : public gl_buffer
+    , public goopax::buffer<T>
+{
+    opengl_buffer(goopax::goopax_device device,
+                  const size_t size,
+                  goopax::BUFFER_FLAGS flags = goopax::BUFFER_READ_WRITE)
+        : gl_buffer(size * sizeof(T))
+        , goopax::buffer<T>(goopax::buffer<T>::create_from_gl(device, this->gl_buffer::gl_id, flags))
+    {
+    }
+
+    opengl_buffer(opengl_buffer&&) = default;
+    opengl_buffer& operator=(opengl_buffer&&) = default;
+};
+
 void render(SDL_Window* window, const opengl_buffer<Eigen::Vector3<float>>& x)
 {
     goopax::goopax_device device = x.get_device();
 
     //    device.wait_all();
-    goopax::flush_gl_interop(device);
+    goopax::flush_graphics_interop(device);
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
 

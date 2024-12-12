@@ -33,7 +33,7 @@ struct goopax_struct_changetype<Eigen::Matrix<T, N...>, X>
 
 #endif
 
-#if GOOPAXLIB_DEBUG
+#if GOOPAX_DEBUG
 using namespace goopax::debug::types;
 template<typename T>
 using Tdebugtype = goopax::debugtype<T>;

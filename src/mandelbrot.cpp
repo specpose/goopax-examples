@@ -27,9 +27,9 @@ static complex<double> clamp_range(const complex<double>& x)
 
 int main(int, char**)
 {
-    sdl_window window("mandelbrot", { 640, 480 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    auto window = sdl_window::create("mandelbrot", { 640, 480 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
-    kernel render(window.device,
+    kernel render(window->device,
                   [](image_resource<2, Vector<Tuint8_t, 4>, true>& image,
                      const complex<gpu_float> center,
                      const gpu_float scale) {
@@ -92,9 +92,9 @@ int main(int, char**)
 
     while (!quit)
     {
-        while (auto e = window.get_event())
+        while (auto e = window->get_event())
         {
-            Vector<Tuint, 2> window_size = window.get_size();
+            std::array<unsigned int, 2> window_size = window->get_size();
             if (e->type == SDL_EVENT_QUIT)
             {
                 quit = true;
@@ -184,8 +184,7 @@ int main(int, char**)
                         quit = true;
                         break;
                     case SDLK_F: {
-                        int err = SDL_SetWindowFullscreen(window.window, (is_fullscreen ? false : true));
-                        if (err == 0)
+                        if (SDL_SetWindowFullscreen(window->window, !is_fullscreen))
                         {
                             is_fullscreen = !is_fullscreen;
                         }
@@ -208,7 +207,7 @@ int main(int, char**)
 
         std::array<unsigned int, 2> render_size;
 
-        window.draw_goopax([&](image_buffer<2, Vector<Tuint8_t, 4>, true>& image) {
+        window->draw_goopax([&](image_buffer<2, Vector<Tuint8_t, 4>, true>& image) {
             render(image, static_cast<complex<float>>(center), scale);
             render_size = image.dimensions();
         });
@@ -218,9 +217,9 @@ int main(int, char**)
         {
             stringstream title;
             auto rate = framecount / std::chrono::duration<double>(now - last_fps_time).count();
-            title << "Mandelbrot: screen resolution=" << render_size[0] << "x" << render_size[1] << ", " << rate
-                  << " fps";
-            window.set_title(title.str());
+            title << "Mandelbrot: screen size=" << render_size[0] << "x" << render_size[1] << ", " << rate << " fps"
+                  << ", device=" << window->device.name();
+            window->set_title(title.str());
             framecount = 0;
             last_fps_time = now;
         }

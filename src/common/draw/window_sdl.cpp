@@ -1,9 +1,8 @@
 #include "window_sdl.h"
+#include "window_gl.h"
+#include "window_plain.h"
 
-#ifdef __linux__
-#include <GL/glx.h>
-#endif
-#include <goopax_gl>
+#include <goopax>
 
 using namespace Eigen;
 using namespace goopax;
@@ -47,65 +46,12 @@ void print_properties(unsigned int props)
         nullptr);
 }
 
-void sdl_window::draw_goopax_impl(std::function<void(image_buffer<2, Eigen::Vector<uint8_t, 4>, true>& image)> func)
-{
-    Eigen::Vector<Tuint, 2> size = get_size();
-
-    if (size != texture_size)
-    {
-        // Either the first call, or the window size has changed. Re-allocating buffers.
-        if (texture != nullptr)
-        {
-            SDL_DestroyTexture(texture);
-            texture = nullptr;
-        }
-
-        texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, size[0], size[1]);
-        if (texture == nullptr)
-        {
-            throw std::runtime_error(std::string("Cannot create texture: ") + SDL_GetError());
-        }
-
-        texture_size = size;
-
-        SDL_PropertiesID texture_props = SDL_GetTextureProperties(texture);
-
-        cout << "\ntexture_props:" << endl;
-        print_properties(texture_props);
-
-        string renderer_name =
-            SDL_GetStringProperty(SDL_GetRendererProperties(renderer), SDL_PROP_RENDERER_NAME_STRING, "");
-        if (renderer_name == "opengl")
-        {
-            unsigned int gl_id = SDL_GetNumberProperty(texture_props, SDL_PROP_TEXTURE_OPENGL_TEXTURE_NUMBER, 123);
-            image = image_buffer<2, Eigen::Vector<uint8_t, 4>, true>::create_from_gl(gl_device, gl_id);
-        }
-        else
-        {
-            throw std::runtime_error("Not implemented: renderer " + renderer_name);
-        }
-
-        SDL_DestroyProperties(texture_props);
-    }
-
-    func(image);
-    flush_gl_interop(gl_device);
-    SDL_SetRenderTarget(renderer, nullptr);
-    bool ret = SDL_RenderTexture(renderer, texture, nullptr, nullptr);
-    if (!ret)
-    {
-        throw std::runtime_error(std::string("SDL_RenderTexture failed: ") + SDL_GetError());
-    }
-
-    SDL_RenderPresent(renderer);
-}
-
-Vector<Tuint, 2> sdl_window::get_size() const
+std::array<unsigned int, 2> sdl_window::get_size() const
 {
     int width;
     int height;
     SDL_GetWindowSize(window, &width, &height);
-    return { width, height };
+    return { (unsigned int)width, (unsigned int)height };
 }
 
 std::optional<SDL_Event> sdl_window::get_event()
@@ -139,7 +85,49 @@ void sdl_window::set_title(const std::string& title) const
     SDL_SetWindowTitle(window, title.c_str());
 }
 
-sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags)
+void sdl_window::draw_goopax(std::function<void(image_buffer<2, Vector<Tuint8_t, 4>, true>& image)> func)
+{
+    draw_goopax_impl(func);
+}
+
+std::unique_ptr<sdl_window> sdl_window::create(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
+{
+#if WITH_METAL
+    try
+    {
+        cout << "Trying metal." << endl;
+        return create_sdl_window_metal(name, size, flags);
+    }
+    catch (std::exception& e)
+    {
+        cout << "Got exception '" << e.what() << "'" << endl;
+    }
+#endif
+#if WITH_OPENGL
+    try
+    {
+        cout << "Trying opengl." << endl;
+        return std::make_unique<sdl_window_gl>(name, size, flags);
+    }
+    catch (std::exception& e)
+    {
+        cout << "Got exception '" << e.what() << "'" << endl;
+    }
+#endif
+    try
+    {
+        cout << "Trying plain." << endl;
+        return std::make_unique<sdl_window_plain>(name, size, flags);
+    }
+    catch (std::exception& e)
+    {
+        cout << "Got exception '" << e.what() << "'" << endl;
+    }
+
+    throw std::runtime_error("Failed to open window");
+}
+
+sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags, const char* renderer_name)
 {
     static std::once_flag once;
     call_once(once, []() {
@@ -161,38 +149,29 @@ sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags)
         throw std::runtime_error(std::string("Cannot create window: ") + SDL_GetError());
     }
 
-    renderer = SDL_CreateRenderer(window, nullptr);
-    if (renderer == nullptr)
+    if (renderer_name != nullptr)
     {
-        SDL_DestroyWindow(window);
-        window = nullptr;
-        throw std::runtime_error(std::string("Cannot create renderer: ") + SDL_GetError());
+        SDL_PropertiesID props = SDL_CreateProperties();
+
+        bool ok = true;
+        ok = ok && SDL_SetStringProperty(props, SDL_PROP_RENDERER_CREATE_NAME_STRING, renderer_name);
+        ok = ok && SDL_SetPointerProperty(props, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, window);
+        assert(ok);
+
+        renderer = SDL_CreateRendererWithProperties(props);
+
+        SDL_DestroyProperties(props);
+
+        if (renderer == nullptr)
+        {
+            SDL_DestroyWindow(window);
+            window = nullptr;
+            throw std::runtime_error(std::string("Cannot create renderer: ") + SDL_GetError());
+        }
+
+        cout << "renderer properties:" << endl;
+        print_properties(SDL_GetRendererProperties(renderer));
     }
-
-    cout << "renderer properties:" << endl;
-    print_properties(SDL_GetRendererProperties(renderer));
-
-    string renderer_name =
-        SDL_GetStringProperty(SDL_GetRendererProperties(renderer), SDL_PROP_RENDERER_NAME_STRING, "");
-
-    cout << "renderer name: " << renderer_name << endl;
-
-    if (renderer_name == "opengl")
-    {
-        gl_device = goopax::get_devices_from_gl()[0];
-    }
-    else
-    {
-        throw std::runtime_error("Not implemented: renderer " + renderer_name);
-    }
-
-#if GOOPAXLIB_DEBUG
-    device = default_device(env_CPU);
-#else
-    device = gl_device;
-#endif
-
-    image.assign(gl_device, { 0, 0 });
 }
 
 sdl_window::~sdl_window()
