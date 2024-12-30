@@ -1,12 +1,7 @@
 Building Example Programs
 =========================
 
-Step 1 (optional):
-     Run script `build-external-libraries.sh` to build additional libraries that some example programs use.
-
-Step 2:
-     Run script `build.sh` to build the example programs.
-
+Run script `build-all.sh` to build required libraries and the example programs.
 
 
 Windows

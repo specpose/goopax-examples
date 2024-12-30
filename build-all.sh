@@ -2,21 +2,18 @@
 
 set -e
 
-export goopax_DIR="$PWD/.."
-export SDL3_DIR=ext/dist/sdl3
-export Eigen3_DIR=ext/dist/eigen
-export OpenCV_DIR=ext/dist/opencv
-export Boost_DIR=ext/dist/boost
-export CMAKE_PREFIX_PATH="$PWD/ext/dist/gmp"
-
 if  [ "$(uname -o)" == "Msys" ]; then
 	CMAKE_FLAGS="$CMAKE_FLAGS -DCMAKE_CONFIGURATION_TYPES=Debug -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug" -DOpenCV_STATIC=ON
 fi
 
 cmake $CMAKE_FLAGS -B build src -DCMAKE_INSTALL_PREFIX="$PWD/dist"
+cmake --build build --target build_external_libraries
+cmake build
+cmake --build build
+
 
 if (echo "$CMAKE_FLAGS" | grep CMAKE_SYSTEM_NAME=iOS); then
     echo "iOS. Skipping install. Please open build/goopax_examples.xcodeproj and build manually."
 else
-    cmake --build build --target install
+    cmake --install build
 fi
