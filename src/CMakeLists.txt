@@ -36,8 +36,8 @@ if (OpenCV_FOUND)
   target_include_directories(opencv SYSTEM INTERFACE ${OpenCV_INCLUDE_DIRS})
 endif()
 
-find_library(gmp_LIBRARY NAMES libgmp.a gmp PATHS "${CMAKE_BINARY_DIR}/ext/gmp")
-find_path(gmp_INCLUDE NAMES gmp.h PATHS "${CMAKE_BINARY_DIR}/ext/gmp")
+find_library(gmp_LIBRARY NAMES libgmp.a gmp PATHS "${CMAKE_BINARY_DIR}/ext/build_gmp-prefix/src/build_gmp/.libs/")
+find_path(gmp_INCLUDE NAMES gmp.h PATHS "${CMAKE_BINARY_DIR}/ext/build_gmp-prefix/src/build_gmp")
 if (NOT "${gmp_LIBRARY}" STREQUAL "gmp_LIBRARY-NOTFOUND" AND
     NOT "${gmp_INCLUDE}" STREQUAL "gmp_INCLUDE-NOTFOUND")
   add_library(gmp INTERFACE)
