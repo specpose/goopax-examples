@@ -36,15 +36,6 @@ if (OpenCV_FOUND)
   target_include_directories(opencv SYSTEM INTERFACE ${OpenCV_INCLUDE_DIRS})
 endif()
 
-find_library(gmp_LIBRARY NAMES libgmp.a gmp PATHS "${CMAKE_BINARY_DIR}/ext/build_gmp-prefix/src/build_gmp/.libs/")
-find_path(gmp_INCLUDE NAMES gmp.h PATHS "${CMAKE_BINARY_DIR}/ext/build_gmp-prefix/src/build_gmp")
-if (NOT "${gmp_LIBRARY}" STREQUAL "gmp_LIBRARY-NOTFOUND" AND
-    NOT "${gmp_INCLUDE}" STREQUAL "gmp_INCLUDE-NOTFOUND")
-  add_library(gmp INTERFACE)
-  target_link_libraries(gmp INTERFACE ${gmp_LIBRARY})
-  target_include_directories(gmp SYSTEM INTERFACE ${gmp_INCLUDE})
-endif()
-
 add_subdirectory(ext)
 
 if (WITH_CUDA)
@@ -102,7 +93,7 @@ if (GOOPAX_DRAW_WITH_OPENGL OR GOOPAX_DRAW_WITH_METAL AND NOT GOOPAX_DEBUG)
 endif()
 
 
-add(deep-zoom-mandelbrot gmp Boost::system goopax_draw)
+add(deep-zoom-mandelbrot Boost::system goopax_draw)
 add(gather)
 add(mandelbrot goopax_draw)
 add(fft opencv goopax_draw)

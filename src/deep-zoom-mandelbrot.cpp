@@ -1,5 +1,5 @@
 #include "common/draw/window_sdl.h"
-#include <boost/multiprecision/gmp.hpp>
+#include <boost/multiprecision/cpp_bin_float.hpp>
 #include <chrono>
 #include <goopax_extra/struct_types.hpp>
 
@@ -50,7 +50,7 @@ complex<TO> complex_cast(const complex<FROM>& from)
 }
 
 template<size_t N>
-using realN = boost::multiprecision::number<boost::multiprecision::gmp_float<N>>;
+using realN = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<N>>;
 using REAL = realN<200>;
 
 Tuint MAX_ITER = 256;
@@ -79,10 +79,10 @@ pair<double, double> scalerange = { 2, 2E-67 };
 double deltat = 92;
 bool manual_mode = false;
 
-realN<10> scale = 2.4161963835763931682e-3;
+realN<10> scale = 2.4161963835763931682e-3f;
 
 complex<REAL> center = moveto;
-double speed_zoom = 1E-2;
+float speed_zoom = 1E-2;
 auto mandelbrot_lasttime = steady_clock::now();
 auto mandelbrot_timebegin = steady_clock::now();
 
@@ -159,7 +159,7 @@ public:
         }
         else
         {
-            double dt = duration<double>(now - mandelbrot_lasttime).count();
+            float dt = duration<float>(now - mandelbrot_lasttime).count();
 
             center += (moveto - center) * complex<REAL>(max(0.4, abs(speed_zoom) * 1.1) * dt);
             scale *= exp(speed_zoom * dt);
