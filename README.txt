@@ -10,15 +10,24 @@ To build the example programs on windows, install the following applications:
 - visual studio 2022
 - cmake
 - git (with git bash)
-Use git bash to run the build scripts `build-external-libraries.sh` and `build.sh`.
+Use git bash to run the build script `./build-all.sh`.
+
+
+MacOS
+-----
+To build the example programs for MacOS or iOS, install the following applications:
+- Xcode
+- cmake
+Open a terminal.
+Set the PATH variable so that the cmake executable is found.
+Then run `./build-all.sh`
 
 
 iOS
 ---
-You need a developer account at https://developer.apple.com
+In addition to the steps required for MacOS, you also need to set the APPLE_DEVELOPER_TEAM environment variable to your developer team id (see https://developer.apple.com/help/account/manage-your-team/locate-your-team-id), and to pass some additional arguments. The following line will build for minimum iOS version 15.
 
-- Open src/cmake/common.cmake, set the DEVELOPMENT_TEAM property to your developer ID (you can see it at https://developer.apple.com -> account -> certificates on the top right).
-- Run build-external-libraries-for-ios.sh
-- Run build-for-ios.sh. 
-- Open build/goopax_examples.xcodeproj and build manually.
+APPLE_DEVELOPER_TEAM=<your developer team id> ./build-all.sh -DCMAKE_SYSTEM_NAME=iOS -G Xcode -DCMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET=15
+
+Then, open build/goopax_examples.xcodeproj and install the programs manually.
 
