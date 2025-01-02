@@ -22,7 +22,7 @@ if (ANDROID OR IOS)
   set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
 endif()
 
-find_package(goopax REQUIRED)
+find_package(goopax REQUIRED PATHS ../..)
 find_package(Threads)
 find_package(OpenCL)
 find_package(Boost 1.65.0 COMPONENTS system PATHS "${CMAKE_BINARY_DIR}/ext/boost")
@@ -69,7 +69,7 @@ macro(add_withfile P FN)
     message("building target ${P}")
     add_executable(${P} ${FN})
     install(TARGETS ${P} DESTINATION bin)
-    
+
     foreach(L ${T})
       target_link_libraries(${P} ${L})
     endforeach()
