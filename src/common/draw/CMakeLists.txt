@@ -1,8 +1,8 @@
 option(GOOPAX_DEBUG "GOOPAX_DEBUG" OFF)
 
 
-find_package(SDL3)
-find_package(Eigen3 3.3 NO_MODULE)
+find_package(SDL3 PATHS "${CMAKE_BINARY_DIR}/ext/sdl3")
+find_package(Eigen3 3.3 NO_MODULE PATHS "${CMAKE_BINARY_DIR}/ext/eigen")
 find_package(OpenGL)
 
 if (TARGET SDL3::SDL3 AND TARGET Eigen3::Eigen)

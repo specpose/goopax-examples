@@ -101,7 +101,7 @@ public:
                 const buffer<complex<Tfloat>>& z_centervals,
                 const complex<Tfloat> center_offset_m,
                 goopax_future<pair_firstsort<float, complex<float>>>& best_dc_m,
-                goopax_future<uint>& want_more)>
+                goopax_future<unsigned int>& want_more)>
         Kernel;
 
     void set_z0()
@@ -154,7 +154,7 @@ public:
             auto t = (duration<double>(now - mandelbrot_timebegin).count() - wait) / (deltat - wait);
             t = max(t, 0.);
             t = min(t, 1.);
-            double x = 0.5 - 0.5 * cos(t * M_PI);
+            double x = 0.5 - 0.5 * cos(t * PI);
             scale = realN<10>(exp(log(scalerange.first) * (1 - x) + log(scalerange.second) * x));
         }
         else
@@ -180,7 +180,7 @@ public:
             center_offset_m *= 2;
         }
 
-        goopax_future<uint> want_more;
+        goopax_future<unsigned int> want_more;
         {
             goopax_future<pair_firstsort<float, complex<float>>> best_dc;
 
@@ -229,7 +229,7 @@ public:
                          const resource<complex<Tfloat>>& z_centervals,
                          const complex<gpu_float> center_offset_m,
                          gather<pair_firstsort<float, complex<float>>, ::op_min>& best_dc,
-                         gather_add<uint>& want_more) {
+                         gather_add<unsigned int>& want_more) {
                           auto& zc = z_centervals;
                           best_dc.first = 1E10f;
                           best_dc.second = numeric_limits<float>::quiet_NaN();
