@@ -13,6 +13,13 @@ using Vector = Matrix<T, N, 1>;
 
 template<typename T>
 using Vector3 = Vector<T, 3>;
+
+template<typename T>
+using VectorX = Eigen::Matrix<T, Eigen::Dynamic, 1>;
+
+template<typename T>
+using MatrixX = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
+
 }
 #endif
 

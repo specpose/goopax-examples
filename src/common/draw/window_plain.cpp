@@ -2,8 +2,7 @@
 using namespace goopax;
 using namespace std;
 
-void sdl_window_plain::draw_goopax_impl(
-    std::function<void(image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>& image)> func)
+void sdl_window_plain::draw_goopax(std::function<void(image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>& image)> func)
 {
     SDL_Surface* surface = SDL_GetWindowSurface(window);
     if (surface == nullptr)

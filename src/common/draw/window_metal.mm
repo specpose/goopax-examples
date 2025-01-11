@@ -7,7 +7,7 @@ sdl_window::create_sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> si
     return std::make_unique<sdl_window_metal>(name, size, flags);
 }
 
-void sdl_window_metal::draw_goopax_impl(
+void sdl_window_metal::draw_goopax(
     std::function<void(goopax::image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>& image)> func)
 {
     @autoreleasepool
@@ -28,6 +28,7 @@ void sdl_window_metal::draw_goopax_impl(
         [buffer presentDrawable:surface];
         [buffer commit];
     }
+    device.wait_all();
 }
 
 void sdl_window_metal::cleanup()
