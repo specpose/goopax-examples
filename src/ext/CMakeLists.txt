@@ -1,15 +1,18 @@
 add_custom_target(build_external_libraries)
 include(ExternalProject)
 
-
 set(MY_OPENCV_ARGS "")
 set(MY_BOOST_ARGS "")
 set(MY_SDL_GIT_TAG main)
 
-set(MY_CMAKE_ARGS -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME} -DBUILD_SHARED_LIBS=0)
+list(APPEND MY_CMAKE_ARGS -DBUILD_SHARED_LIBS=0)
 
-if (IOS)
+if (WIN32)
+  list(APPEND MY_OPENCV_ARGS "-DOpenCV_STATIC:BOOL=ON")
+  set(OpenCV_STATIC ON CACHE "BOOL" "")
+elseif (IOS)
   list(APPEND MY_CMAKE_ARGS
+    -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
     -G Xcode
     -DCMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET=${CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET})
   list(APPEND MY_OPENCV_ARGS
@@ -18,7 +21,6 @@ if (IOS)
     -DBUILD_WEBP=0
     -DWITH_JASPER=0
     -DBUILD_JASPER=0)
-  
   set(MY_BOOST_ARGS "-DBOOST_EXCLUDE_LIBRARIES=process|context|coroutine|fiber|asio|log")
   set(MY_SDL_GIT_TAG 8f9a562969761ec626d298079c99341fd25b4644)
 endif()
@@ -42,7 +44,7 @@ if (NOT TARGET SDL3::SDL3)
   add_dependencies(build_external_libraries build_sdl3)
 endif()
 
-if (NOT TARGET opencv)
+if (NOT TARGET opencv AND NOT ANDROID)
   ExternalProject_Add(
     build_opencv
     #DEPENDS Eigen3::Eigen
@@ -72,7 +74,7 @@ if (NOT TARGET opencv)
   add_dependencies(build_external_libraries build_opencv)
 endif()
 
-if (NOT TARGET Boost::system)
+if (NOT TARGET Boost::system AND NOT ANDROID)
   ExternalProject_Add(
     build_boost
     GIT_REPOSITORY https://github.com/boostorg/boost.git
@@ -100,4 +102,23 @@ if (NOT TARGET Eigen3::Eigen)
     INSTALL_COMMAND ""
   )
   add_dependencies(build_external_libraries build_eigen)
+endif()
+
+if (NOT TARGET glatter)
+  #include(FetchContent)
+  ExternalProject_Add(
+  #FetchContent_Declare(
+    build_glatter
+    GIT_REPOSITORY https://github.com/imakris/glatter.git
+    GIT_TAG 886f9765c6553ecb0934b5ec187db7d57ab0cfbc
+    EXCLUDE_FROM_ALL 1
+    #OVERRIDE_FIND_PACKAGE
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND ""
+    BUILD_COMMAND ""
+  )
+  #FetchContent_MakeAvailable(fetch_glatter)
+  #FetchContent_Populate(glatter)
+  #FetchContent_GetProperties(glatter SOURCE_DIR)
+  add_dependencies(build_external_libraries build_glatter)
 endif()
