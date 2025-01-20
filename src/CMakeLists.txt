@@ -65,7 +65,6 @@ if (GOOPAX_DRAW_WITH_OPENGL OR GOOPAX_DRAW_WITH_METAL AND NOT GOOPAX_DEBUG)
   endif()
 endif()
 
-
 add(deep-zoom-mandelbrot Boost::system goopax_draw)
 add(gather)
 add(mandelbrot goopax_draw)

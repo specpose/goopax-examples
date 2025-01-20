@@ -53,7 +53,6 @@ else()
     target_compile_definitions(goopax_draw PUBLIC -DWITH_METAL=0)
 endif()
 
-#target_include_directories(goopax_draw SYSTEM PRIVATE "ext/glatter/include")
 target_link_libraries(goopax_draw PUBLIC SDL3::SDL3)
 if (NOT APPLE)
   if (NOT WIN32 AND NOT ANDROID)
