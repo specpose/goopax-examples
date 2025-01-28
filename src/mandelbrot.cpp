@@ -1,4 +1,5 @@
 #include "common/draw/window_sdl.h"
+#include <SDL3/SDL_main.h>
 #include <chrono>
 #include <goopax_extra/struct_types.hpp>
 
@@ -8,7 +9,7 @@ using namespace Eigen;
 using goopax::interface::PI;
 using std::chrono::steady_clock;
 
-template<class D, typename window_size_t=unsigned int>
+template<class D, typename window_size_t = unsigned int>
 complex<D> calc_c(complex<D> center, D scale, Vector<D, 2> position, window_size_t window_size)
 {
     // Calculate the value c for a given image point.
