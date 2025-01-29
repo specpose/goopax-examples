@@ -1,4 +1,5 @@
 #include "common/draw/window_sdl.h"
+#include <SDL3/SDL_main.h>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <chrono>
 #include <goopax_extra/struct_types.hpp>
@@ -55,8 +56,8 @@ using REAL = realN<200>;
 
 Tuint MAX_ITER = 256;
 
-template<typename D, typename E>
-complex<D> calc_c(complex<D> center, auto scale, Vector<E, 2> position, auto window_size)
+template<typename D, typename E, typename scale_t = REAL, typename window_size_t = unsigned int>
+complex<D> calc_c(complex<D> center, scale_t scale, Vector<E, 2> position, window_size_t window_size)
 {
     // Calculate the value c for a given image point.
     // This function is called both from within the kernel and from the main function

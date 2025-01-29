@@ -8,8 +8,10 @@ set(MY_SDL_GIT_TAG main)
 list(APPEND MY_CMAKE_ARGS -DBUILD_SHARED_LIBS=0)
 
 if (WIN32)
-  list(APPEND MY_OPENCV_ARGS "-DOpenCV_STATIC:BOOL=ON")
+  list(APPEND MY_OPENCV_ARGS "-DOpenCV_STATIC=ON")
   set(OpenCV_STATIC ON CACHE "BOOL" "")
+elseif (ANDROID)
+  list(APPEND MY_BOOST_ARGS "-DBOOST_EXCLUDE_LIBRARIES=process")
 elseif (IOS)
   list(APPEND MY_CMAKE_ARGS
     -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
@@ -21,12 +23,12 @@ elseif (IOS)
     -DBUILD_WEBP=0
     -DWITH_JASPER=0
     -DBUILD_JASPER=0)
-  set(MY_BOOST_ARGS "-DBOOST_EXCLUDE_LIBRARIES=process|context|coroutine|fiber|asio|log")
+  list(APPEND MY_BOOST_ARGS "-DBOOST_EXCLUDE_LIBRARIES=process|context|coroutine|fiber|asio|log")
   set(MY_SDL_GIT_TAG 8f9a562969761ec626d298079c99341fd25b4644)
 endif()
 
 
-if (NOT TARGET SDL3::SDL3)
+if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
   ExternalProject_Add(
     build_sdl3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
@@ -69,7 +71,7 @@ if (NOT TARGET opencv AND NOT ANDROID)
   add_dependencies(build_external_libraries build_opencv)
 endif()
 
-if (NOT TARGET Boost::system AND NOT ANDROID)
+if (NOT TARGET Boost::system)
   ExternalProject_Add(
     build_boost
     GIT_REPOSITORY https://github.com/boostorg/boost.git
