@@ -257,12 +257,10 @@ int main(int argc, char** argv)
             run_with_types<Thalf, Thalf>(device);
             run_with_types<Thalf, Tfloat>(device);
         }
-#if GOOPAX_HAVE_BFLOAT16_T
-        if (device.support_type(goopax_bfloat16_type()))
+        if (device.support_type(Tbfloat16()))
         {
             run_with_types<Tbfloat16, Tfloat>(device);
         }
-#endif
         cout << endl << endl;
     }
 }

@@ -49,3 +49,10 @@ using namespace goopax::release::types;
 template<typename T>
 using Tdebugtype = T;
 #endif
+
+#if !defined(__STDCPP_FLOAT16_T__) && defined(EIGEN_MAJOR_VERSION)
+using Thalf = Tdebugtype<Eigen::half>;
+#endif
+#if !defined(__STDCPP_BFLOAT16_T__) && defined(EIGEN_MAJOR_VERSION)
+using Tbfloat16 = Tdebugtype<Eigen::bfloat16>;
+#endif
