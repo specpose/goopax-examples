@@ -25,9 +25,9 @@ Then run `./build-all.sh`
 
 iOS
 ---
-In addition to the steps required for MacOS, you also need to set the APPLE_DEVELOPER_TEAM environment variable to your developer team id (see https://developer.apple.com/help/account/manage-your-team/locate-your-team-id), and to pass some additional arguments. The following line will build for minimum iOS version 15.
+In addition to the steps required for MacOS, you also need to specify your developer team id (see https://developer.apple.com/help/account/manage-your-team/locate-your-team-id), and to pass some additional arguments. The following line will build for minimum iOS version 15.
 
-APPLE_DEVELOPER_TEAM=<your developer team id> ./build-all.sh -DCMAKE_SYSTEM_NAME=iOS -G Xcode -DCMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET=15
+./build-all.sh -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET=15 -DAPPLE_DEVELOPER_TEAM=<your_developer_team_id>
 
 Then, open build/goopax_examples.xcodeproj and install the programs manually.
 
