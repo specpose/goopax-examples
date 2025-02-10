@@ -50,9 +50,14 @@ template<typename T>
 using Tdebugtype = T;
 #endif
 
-#if !defined(__STDCPP_FLOAT16_T__) && defined(EIGEN_MAJOR_VERSION)
+#ifdef __STDCPP_FLOAT16_T__
+using Thalf = Tdebugtype<std::float16_t>;
+#elif __has_include(<Eigen/Eigen>)
 using Thalf = Tdebugtype<Eigen::half>;
 #endif
-#if !defined(__STDCPP_BFLOAT16_T__) && defined(EIGEN_MAJOR_VERSION)
+
+#ifdef __STDCPP_BFLOAT16_T__
+using Tbfloat16 = Tdebugtype<std::bfloat16_t>;
+#elif __has_include(<Eigen/Eigen>)
 using Tbfloat16 = Tdebugtype<Eigen::bfloat16>;
 #endif
