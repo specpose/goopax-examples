@@ -1,7 +1,7 @@
 // @@@ CONVERT_TYPES_IGNORE @@@
 
-#include "common/output.hpp"
 #include <goopax>
+#include <goopax_extra/output.hpp>
 using namespace goopax;
 using namespace goopax::debug;
 using namespace types;
