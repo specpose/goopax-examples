@@ -5,7 +5,9 @@
  */
 
 #include "common/draw/window_sdl.h"
+#if !USE_SDL2
 #include <SDL3/SDL_main.h>
+#endif
 #include <goopax_extra/fft.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -212,6 +214,7 @@ int main(int argc, char** argv)
 
         while (auto e = window->get_event())
         {
+#if !USE_SDL2
             if (e->type == SDL_EVENT_QUIT)
             {
                 quit = true;
@@ -219,6 +222,15 @@ int main(int argc, char** argv)
             else if (e->type == SDL_EVENT_KEY_DOWN)
             {
                 switch (e->key.key)
+#else
+            if (e->type == SDL_QUIT)
+            {
+                quit = true;
+            }
+            else if (e->type == SDL_KEY_DOWN)
+            {
+                switch (e->key.keysym.sym)
+#endif
                 {
                     case SDLK_ESCAPE:
                         quit = true;

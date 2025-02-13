@@ -1,7 +1,11 @@
 #pragma once
 
 #include "types.h"
+#if USE_SDL2
+#include <SDL.h>
+#else
 #include <SDL3/SDL.h>
+#endif
 #include <optional>
 
 void print_properties(unsigned int props);

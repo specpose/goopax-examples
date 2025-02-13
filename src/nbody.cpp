@@ -5,7 +5,9 @@
 
 #include "common/draw/window_sdl.h"
 #include "common/particle.hpp"
+#if !USE_SDL2
 #include <SDL3/SDL_main.h>
+#endif
 #include <chrono>
 #include <random>
 using std::chrono::steady_clock;
@@ -62,7 +64,13 @@ int main(int argc, char** argv)
     const double dt = 5E-3;
 
     unique_ptr<sdl_window> window =
-        sdl_window::create("nbody", { 1024, 768 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+        sdl_window::create("nbody", { 1024, 768 }, SDL_WINDOW_RESIZABLE |
+#if !USE_SDL2
+                                                   SDL_WINDOW_HIGH_PIXEL_DENSITY
+#else
+                                                   SDL_WINDOW_ALLOW_HIGHDPI
+#endif
+                                                   );
     goopax_device device = window->device;
 
 #if WITH_METAL
@@ -104,10 +112,15 @@ int main(int argc, char** argv)
     {
         while (auto e = window->get_event())
         {
+#if !USE_SDL2
             if (e->type == SDL_EVENT_QUIT)
+#else
+            if (e->type == SDL_QUIT)
+#endif
             {
                 quit = true;
             }
+#if !USE_SDL2
             else if (e->type == SDL_EVENT_KEY_DOWN)
             {
                 switch (e->key.key)
@@ -116,6 +129,16 @@ int main(int argc, char** argv)
                         quit = true;
                         break;
                     case SDLK_F: {
+#else
+            else if (e->type == SDL_KEYDOWN)
+            {
+                switch (e->key.keysym.sym)
+                {
+                    case SDLK_ESCAPE:
+                        quit = true;
+                        break;
+                    case SDLK_f: {
+#endif
                         if (SDL_SetWindowFullscreen(window->window, !is_fullscreen))
                         {
                             is_fullscreen = !is_fullscreen;

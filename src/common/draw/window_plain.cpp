@@ -46,7 +46,11 @@ void sdl_window_plain::draw_goopax(std::function<void(image_buffer<2, Eigen::Vec
     }
     SDL_UnlockSurface(surface);
     SDL_UpdateWindowSurface(window);
+#if !USE_SDL2
     SDL_DestroySurface(surface);
+#else
+    SDL_FreeSurface(surface);
+#endif
 }
 
 sdl_window_plain::sdl_window_plain(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)

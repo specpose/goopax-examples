@@ -4,7 +4,9 @@
  */
 
 #include "common/draw/window_sdl.h"
+#if !USE_SDL2
 #include <SDL3/SDL_main.h>
+#endif
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <chrono>
 #include <goopax_extra/struct_types.hpp>
@@ -317,7 +319,13 @@ int main(int, char**)
 {
     shared_ptr<sdl_window> window = sdl_window::create("deep zoom mandelbrot",
                                                        Eigen::Vector<Tuint, 2>{ 640, 480 },
-                                                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+                                                       SDL_WINDOW_RESIZABLE |
+#if !USE_SDL2
+                                                       SDL_WINDOW_HIGH_PIXEL_DENSITY
+#else
+                                                       SDL_WINDOW_ALLOW_HIGHDPI
+#endif
+                                                       );
 
     using namespace boost::multiprecision;
 
@@ -336,11 +344,19 @@ int main(int, char**)
         while (auto e = window->get_event())
         {
             array<unsigned int, 2> window_size = window->get_size();
+#if !USE_SDL2
             if (e->type == SDL_EVENT_QUIT)
+#else
+            if (e->type == SDL_QUIT)
+#endif
             {
                 quit = true;
             }
+#if !USE_SDL2
             else if (e->type == SDL_EVENT_FINGER_DOWN)
+#else
+            else if (e->type == SDL_FINGERDOWN)
+#endif
             {
                 ++num_fingers;
                 cout << "num_fingers=" << num_fingers << endl;
@@ -350,7 +366,11 @@ int main(int, char**)
                 }
                 fingermotion_active = false;
             }
+#if !USE_SDL2
             else if (e->type == SDL_EVENT_FINGER_UP)
+#else
+            else if (e->type == SDL_FINGERUP)
+#endif
             {
                 --num_fingers;
                 cout << "num_fingers=" << num_fingers << endl;
@@ -359,8 +379,11 @@ int main(int, char**)
                     too_many_fingers = false;
                 }
             }
-
+#if !USE_SDL2
             else if (e->type == SDL_EVENT_FINGER_MOTION)
+#else
+            else if (e->type == SDL_FINGERMOTION)
+#endif
             {
                 cout << "fingermotion. x=" << e->tfinger.x << ", y=" << e->tfinger.y << endl;
 
@@ -384,10 +407,17 @@ int main(int, char**)
                 last_fingermotion = { e->tfinger.x, e->tfinger.y };
                 fingermotion_active = true;
             }
-
+#if !USE_SDL2
             else if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+#else
+            else if (e->type == SDL_MOUSEBUTTONDOWN)
+#endif
             {
+#if !USE_SDL2
                 float x = 0, y = 0;
+#else
+                int x = 0, y = 0;
+#endif
                 SDL_GetMouseState(&x, &y);
                 cout << "Mouse button " << e->button.button << ". x=" << x << ", y=" << y << endl;
 
@@ -405,7 +435,11 @@ int main(int, char**)
                     manual_mode = true;
                 }
             }
+#if !USE_SDL2
             else if (e->type == SDL_EVENT_MOUSE_WHEEL)
+#else
+            else if (e->type == SDL_MOUSEWHEEL)
+#endif
             {
                 speed_zoom -= e->wheel.y;
                 manual_mode = true;
@@ -419,15 +453,27 @@ int main(int, char**)
                     }
                 }
             */
-
+#if !USE_SDL2
             else if (e->type == SDL_EVENT_KEY_DOWN)
             {
+
                 switch (e->key.key)
                 {
                     case SDLK_ESCAPE:
                         quit = true;
                         break;
                     case SDLK_F: {
+#else
+            else if (e->type == SDL_KEYDOWN)
+            {
+
+                switch (e->key.keysym.sym)
+                {
+                    case SDLK_ESCAPE:
+                        quit = true;
+                        break;
+                    case SDLK_f: {
+#endif
                         if (SDL_SetWindowFullscreen(window->window, !is_fullscreen))
                         {
                             is_fullscreen = !is_fullscreen;

@@ -8,6 +8,7 @@ using namespace Eigen;
 using namespace goopax;
 using namespace std;
 
+#if !USE_SDL2
 void print_properties(unsigned int props)
 {
     SDL_EnumerateProperties(
@@ -45,6 +46,7 @@ void print_properties(unsigned int props)
         },
         nullptr);
 }
+#endif
 
 std::array<unsigned int, 2> sdl_window::get_size() const
 {
@@ -135,6 +137,10 @@ sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags, 
     std::atexit([]() { SDL_Quit(); });
 
     window = SDL_CreateWindow(name,    // window title
+#if USE_SDL2
+                              SDL_WINDOWPOS_UNDEFINED, // initial x position
+                              SDL_WINDOWPOS_UNDEFINED, // initial y position
+#endif
                               size[0], // width, in pixels
                               size[1], // height, in pixels
                               flags    /*| SDL_WINDOW_OPENGL */
@@ -146,6 +152,7 @@ sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags, 
 
     if (renderer_name != nullptr)
     {
+#if !USE_SDL2
         SDL_PropertiesID props = SDL_CreateProperties();
 
         bool ok = true;
@@ -166,6 +173,9 @@ sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags, 
 
         cout << "renderer properties:" << endl;
         print_properties(SDL_GetRendererProperties(renderer));
+#else
+        renderer = SDL_CreateRenderer(window, -1, 0);
+#endif
     }
 }
 
