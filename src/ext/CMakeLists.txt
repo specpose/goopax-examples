@@ -95,7 +95,7 @@ if (NOT TARGET Eigen3::Eigen)
     EXCLUDE_FROM_ALL 1
     CMAKE_ARGS "${MY_CMAKE_ARGS}"
     "--install-prefix ${CMAKE_CURRENT_BINARY_DIR}/eigen"
-    INSTALL_COMMAND ""
+    #INSTALL_COMMAND ""
   )
   add_dependencies(build_external_libraries build_eigen)
 endif()
