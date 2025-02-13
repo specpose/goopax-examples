@@ -14,8 +14,7 @@ struct sdl_window_metal : sdl_window
     const CAMetalLayer* swapchain = nullptr;
     id<MTLCommandQueue> queue;
 
-protected:
-    virtual void draw_goopax_impl(
+    virtual void draw_goopax(
         std::function<void(goopax::image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>& image)> func) override final;
 
 private:

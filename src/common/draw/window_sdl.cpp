@@ -85,11 +85,6 @@ void sdl_window::set_title(const std::string& title) const
     SDL_SetWindowTitle(window, title.c_str());
 }
 
-void sdl_window::draw_goopax(std::function<void(image_buffer<2, Vector<Tuint8_t, 4>, true>& image)> func)
-{
-    draw_goopax_impl(func);
-}
-
 std::unique_ptr<sdl_window> sdl_window::create(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
 {
 #if WITH_METAL

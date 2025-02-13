@@ -20,12 +20,8 @@ public:
     std::optional<SDL_Event> wait_event();
     void set_title(const std::string& title) const;
 
-private:
     virtual void
-    draw_goopax_impl(std::function<void(goopax::image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>& image)> func) = 0;
-
-public:
-    void draw_goopax(std::function<void(goopax::image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>& image)> func);
+    draw_goopax(std::function<void(goopax::image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>& image)> func) = 0;
 
     static std::unique_ptr<sdl_window> create(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags = 0);
 

@@ -3,7 +3,7 @@
 using namespace std;
 using namespace goopax;
 
-void sdl_window_gl::draw_goopax_impl(std::function<void(image_buffer<2, Eigen::Vector<uint8_t, 4>, true>& image)> func)
+void sdl_window_gl::draw_goopax(std::function<void(image_buffer<2, Eigen::Vector<uint8_t, 4>, true>& image)> func)
 {
     std::array<unsigned int, 2> size = get_size();
 
