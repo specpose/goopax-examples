@@ -2,7 +2,11 @@ include(ExternalProject)
 
 set(MY_OPENCV_ARGS "")
 set(MY_BOOST_ARGS "")
-set(MY_SDL_GIT_TAG release-3.2.4)
+if (NOT GOOPAX_DRAW_USE_SDL2)
+  set(MY_SDL_GIT_TAG release-3.2.4)
+else()
+  set(MY_SDL_GIT_TAG SDL2)
+endif()
 
 list(APPEND MY_CMAKE_ARGS -DBUILD_SHARED_LIBS=0)
 
@@ -36,7 +40,7 @@ endif()
 
 
   ExternalProject_Add(
-    build_sdl3
+    build_sdl
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
     GIT_TAG ${MY_SDL_GIT_TAG}
     EXCLUDE_FROM_ALL 1

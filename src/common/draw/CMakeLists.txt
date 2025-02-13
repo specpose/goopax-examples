@@ -1,7 +1,7 @@
 option(GOOPAX_DEBUG "GOOPAX_DEBUG" OFF)
 
-
-find_package(SDL3 PATHS "${CMAKE_BINARY_DIR}/ext/sdl3")
+find_package(SDL3 PATHS "${CMAKE_BINARY_DIR}/ext/sdl")
+find_package(SDL2 PATHS "${CMAKE_BINARY_DIR}/ext/sdl")
 find_package(Eigen3 3.3 NO_MODULE PATHS "${CMAKE_BINARY_DIR}/ext/eigen")
 find_package(OpenGL)
 
@@ -13,7 +13,7 @@ else()
 endif()
 
 
-if (TARGET SDL3::SDL3 AND TARGET Eigen3::Eigen)
+if ((TARGET SDL3::SDL3 OR TARGET SDL2::SDL2) AND TARGET Eigen3::Eigen)
 
 if (TARGET OpenGL::GL)
     option(GOOPAX_DRAW_WITH_OPENGL "with OpenGL support" 1)
@@ -32,9 +32,15 @@ set(GOOPAX_DRAW_WITH_METAL 0)
 set(GOOPAX_DRAW_WITH_OPENGL 0)
 endif()
 
+if (TARGET SDL3::SDL3)
+    option(GOOPAX_DRAW_USE_SDL2 "Backport to SDL2" 0)
+else()
+    option(GOOPAX_DRAW_USE_SDL2 "Backport to SDL2" 1)
+endif()
+
 message("OpenGL: ${GOOPAX_DRAW_WITH_OPENGL}")
 message("Metal: ${GOOPAX_DRAW_WITH_METAL}")
-
+message("SDL2: ${GOOPAX_DRAW_USE_SDL2}")
 
 set (FILES window_sdl.cpp window_sdl.h window_plain.h window_plain.cpp)
 if (GOOPAX_DRAW_WITH_METAL)
@@ -61,7 +67,13 @@ else()
     target_compile_definitions(goopax_draw PUBLIC -DWITH_METAL=0)
 endif()
 
-target_link_libraries(goopax_draw PUBLIC SDL3::SDL3)
+if (NOT GOOPAX_DRAW_USE_SDL2)
+  target_compile_definitions(goopax_draw PUBLIC -DUSE_SDL2=0)
+  target_link_libraries(goopax_draw PUBLIC SDL3::SDL3)
+else()
+  target_compile_definitions(goopax_draw PUBLIC -DUSE_SDL2=1)
+  target_link_libraries(goopax_draw PUBLIC SDL2::SDL2)
+endif()
 if (NOT APPLE)
   if (NOT WIN32 AND NOT ANDROID)
     target_link_libraries(goopax_draw PUBLIC -lX11)
