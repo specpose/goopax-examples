@@ -28,7 +28,6 @@ void sdl_window_metal::draw_goopax(
         [buffer presentDrawable:surface];
         [buffer commit];
     }
-    device.wait_all();
 }
 
 void sdl_window_metal::cleanup()

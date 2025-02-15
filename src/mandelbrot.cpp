@@ -213,6 +213,11 @@ int main(int, char**)
             render_size = image.dimensions();
         });
 
+        // Because there are no other synchronization points in this demo
+        // (we are not evaluating any results from the GPU), this wait is
+        // required to prevent endless submission of asynchronous kernel calls.
+        window->device.wait_all();
+
         ++framecount;
         if (now - last_fps_time > std::chrono::seconds(1))
         {
