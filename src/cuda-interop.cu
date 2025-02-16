@@ -51,7 +51,7 @@ int main()
         gpu_for_global(0, A.size(), [&](gpu_uint k) { A[k] += 1; });
     });
 
-    for (uint k = 0; k < h_A.size(); ++k)
+    for (unsigned int k = 0; k < h_A.size(); ++k)
     {
         h_A[k] = k;
     }
@@ -82,7 +82,7 @@ int main()
     cout << "now: h_A=" << h_A << endl;
 
     cout << "Checking result." << endl;
-    for (uint k = 0; k < h_A.size(); ++k)
+    for (unsigned int k = 0; k < h_A.size(); ++k)
     {
         assert(h_A[k] == k + 2);
     }

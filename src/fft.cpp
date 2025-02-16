@@ -199,6 +199,11 @@ int main(int argc, char** argv)
             data->render(reinterpret_cast<Vector<uint8_t, 3>*>(frame.data), image);
         });
 
+        // Because there are no other synchronization points in this demo
+        // (we are not evaluating any results from the GPU), this wait is
+        // required to prevent endless submission of asynchronous kernel calls.
+        window->device.wait_all();
+
         while (auto e = window->get_event())
         {
             if (e->type == SDL_EVENT_QUIT)

@@ -77,7 +77,7 @@ struct matmul
 
         std::random_device rd;
         WELL512_data rnd(device, device.default_global_size_max(), rd());
-        kernel fill_random(device, [this, &rnd](resource<ab_float_type>& a) {
+        kernel fill_random(device, [&rnd](resource<ab_float_type>& a) {
             WELL512_lib rndlib(rnd);
 
             for_each_global(a.begin(), a.end(), [&](gpu_ab_float_type& v) {

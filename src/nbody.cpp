@@ -150,6 +150,10 @@ int main(int argc, char** argv)
         render(window->window, x);
         SDL_GL_SwapWindow(window->window);
 #endif
+
+        // Because there are no other synchronization points in this demo
+        // (we are not evaluating any results from the GPU), this wait is
+        // required to prevent endless submission of asynchronous kernel calls.
         f.wait();
     }
     return 0;
