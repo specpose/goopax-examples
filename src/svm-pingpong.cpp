@@ -1,4 +1,7 @@
-// @@@ CONVERT_TYPES_IGNORE @@@
+/**
+   \example svm-pingpong.cpp
+   Multiple devices exchange messages during the runtime of the kernel.
+ */
 
 #include <atomic>
 #include <chrono>
@@ -53,7 +56,7 @@ void pingpong()
                     gpu_if(local_id() == 0)
                     {
                         //  Waiting for our turn.
-                        gpu_while(atomic_load(*ptr, memory_order_acquire, memory::scope::system) != expect)
+                        gpu_while(atomic_load(*ptr, memory_order_acquire, memory::system) != expect)
                         {
                         }
                     }
@@ -67,7 +70,7 @@ void pingpong()
                     gpu_if(local_id() == 0)
                     {
                         // Handling over to the next id.
-                        auto old = atomic_add(*ptr, ADD(), memory_order_release, memory::scope::system);
+                        auto old = atomic_add(*ptr, ADD(), memory_order_release, memory::system);
                         gpu_assert(old == expect);
                     }
                 });

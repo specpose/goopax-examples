@@ -1,3 +1,8 @@
+/**
+   \example pi.cpp
+   Throwing darts to approximate the value of pi
+ */
+
 #include <chrono>
 #include <goopax>
 #include <goopax_extra/random.hpp>

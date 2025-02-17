@@ -1,12 +1,10 @@
-// @@@ CONVERT_TYPES_IGNORE @@@
-
-/*
+/**
+   \example cl-interop-1.cpp
 
   OpenCL interoperability example program 1
 
   In this example, a compute environment is set up by GOOPAX.
   A GOOPAX buffer is allocated and used by OpenCL and GOOPAX.
-
  */
 
 #define CL_HPP_ENABLE_EXCEPTIONS 1

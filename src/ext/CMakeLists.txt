@@ -38,7 +38,7 @@ if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
     "-DSDL_SHARED=0"
     "-DSDL_STATIC=1"
     "-DSDL_ASSEMBLY=0"
-    "--install-prefix ${CMAKE_CURRENT_BINARY_DIR}/sdl3"
+    "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/sdl3"
   )
   add_dependencies(build_external_libraries build_sdl3)
 endif()
@@ -66,7 +66,7 @@ if (NOT TARGET opencv AND NOT ANDROID)
     "-DWITH_OPENJPEG=0"
     "-DWITH_TIFF=0"
     "-DWITH_FFMPEG=0"
-    "--install-prefix ${CMAKE_CURRENT_BINARY_DIR}/opencv"
+    "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/opencv"
   )
   add_dependencies(build_external_libraries build_opencv)
 endif()
@@ -81,7 +81,7 @@ if (NOT TARGET Boost::system)
     INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/boost"
     LIST_SEPARATOR |   # Workaround to prevent MY_BOOST_ARGS from being treated as a list.
     CMAKE_ARGS ${MY_CMAKE_ARGS} "${MY_BOOST_ARGS}"
-    "--install-prefix ${CMAKE_CURRENT_BINARY_DIR}/boost"
+    "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/boost"
   )
   add_dependencies(build_external_libraries build_boost)
 endif()
@@ -94,7 +94,7 @@ if (NOT TARGET Eigen3::Eigen)
     GIT_TAG 3.4.0
     EXCLUDE_FROM_ALL 1
     CMAKE_ARGS "${MY_CMAKE_ARGS}"
-    "--install-prefix ${CMAKE_CURRENT_BINARY_DIR}/eigen"
+    "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/eigen"
     #INSTALL_COMMAND ""
   )
   add_dependencies(build_external_libraries build_eigen)

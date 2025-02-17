@@ -1,4 +1,7 @@
-// @@@ CONVERT_TYPES_IGNORE @@@
+/**
+   \example helloworld.cpp
+   Greetings from every thread.
+ */
 
 #include <goopax>
 using namespace goopax;

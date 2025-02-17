@@ -1,6 +1,5 @@
-// @@@ CONVERT_TYPES_IGNORE @@@
-
-/*
+/**
+   \example cl-interop-2.cpp
 
   OpenCL interoperability example program 2
 

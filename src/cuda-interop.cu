@@ -1,3 +1,9 @@
+/**
+\example cuda-interop.cu
+
+Cuda interoperability example program
+*/
+
 #include <assert.h>
 #include <goopax>
 #include <iostream>

@@ -1,15 +1,14 @@
-// @@@ CONVERT_TYPES_IGNORE @@@
+/**
+   \example race-condition.cpp
+   Provoking and detecting a race condition. This program will abort with an error message.
+   Uncomment "L.barrier();" to repair it.
+ */
 
 #include <goopax>
 #include <goopax_extra/output.hpp>
 using namespace goopax;
 using namespace goopax::debug;
 using namespace types;
-
-/*
-  Provoking and detecting a race condition. This program will abort with an error message.
-  Uncommenting "L.barrier();" will repair it.
- */
 
 int main()
 {

@@ -1,3 +1,9 @@
+/**
+   \example matmul.cpp
+   matrix multiplication example program, demonstrating the
+   use of tensor core hardware acceleration
+ */
+
 #include "common/draw/types.h"
 #include <cassert>
 #include <chrono>

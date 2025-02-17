@@ -1,3 +1,8 @@
+/**
+   \example mandelbrot.cpp
+   Mandelbrot example
+ */
+
 #include "common/draw/window_sdl.h"
 #include <SDL3/SDL_main.h>
 #include <chrono>

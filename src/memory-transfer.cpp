@@ -1,4 +1,7 @@
-// @@@ CONVERT_TYPES_IGNORE @@@
+/**
+   \example memory-transfer.cpp
+   Benchmarking memory transfer between host and device
+ */
 #include <cassert>
 #include <chrono>
 #include <goopax>
