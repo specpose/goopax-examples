@@ -3,7 +3,7 @@ include(ExternalProject)
 
 set(MY_OPENCV_ARGS "")
 set(MY_BOOST_ARGS "")
-set(MY_SDL_GIT_TAG main)
+set(MY_SDL_GIT_TAG release-3.2.4)
 
 list(APPEND MY_CMAKE_ARGS -DBUILD_SHARED_LIBS=0)
 
