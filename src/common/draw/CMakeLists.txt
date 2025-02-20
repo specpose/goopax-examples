@@ -72,4 +72,6 @@ if (NOT APPLE)
 endif()
 target_link_libraries(goopax_draw PUBLIC goopax::goopax Eigen3::Eigen goopax_typedefs)
 
+else()
+  message(WARNING "goopax_draw dependencies not found: Download with cmake --build build --target build_sdl3 --target build_eigen")
 endif()
