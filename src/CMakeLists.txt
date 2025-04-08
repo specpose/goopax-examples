@@ -59,11 +59,14 @@ endif()
 
 add_subdirectory(ext)
 
-if (TARGET build_glatter)
+find_path(GLATTER_INCLUDE_DIR
+  glatter/glatter.h
+  PATHS "${CMAKE_BINARY_DIR}/ext/build_glatter-prefix/src/build_glatter/include"
+)
+
+if (GLATTER_INCLUDE_DIR)
   add_library(glatter INTERFACE)
-  ExternalProject_Get_Property(build_glatter SOURCE_DIR)
-  message("SOURCE_DIR=${SOURCE_DIR}")
-  target_include_directories(glatter INTERFACE ${SOURCE_DIR}/include)
+  target_include_directories(glatter SYSTEM INTERFACE "${GLATTER_INCLUDE_DIR}")
 endif()
 
 add_subdirectory(common/draw)
