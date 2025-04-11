@@ -43,7 +43,7 @@ if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
   add_dependencies(build_external_libraries build_sdl3)
 endif()
 
-if (NOT TARGET opencv AND NOT ANDROID)
+if (NOT OpenCV_FOUND AND NOT ANDROID)
   ExternalProject_Add(
     build_opencv
     URL https://github.com/opencv/opencv/archive/refs/tags/4.10.0.zip
@@ -100,7 +100,7 @@ if (NOT TARGET Eigen3::Eigen)
   add_dependencies(build_external_libraries build_eigen)
 endif()
 
-if (NOT TARGET glatter)
+if (NOT GLATTER_INCLUDE_DIR)
   ExternalProject_Add(
     build_glatter
     GIT_REPOSITORY https://github.com/imakris/glatter.git
