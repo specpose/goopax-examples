@@ -40,7 +40,6 @@ if (ANDROID OR IOS)
   message("Applying toolchain workaround, so that packages are found.")
   list(APPEND MY_CMAKE_ARGS "-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE:STRING=BOTH" "-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY:STRING=BOTH" "-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE:STRING=BOTH")
 endif()
-
 make_persistent("${MY_CMAKE_ARGS}")
 
 find_package(goopax REQUIRED PATHS ../..)
@@ -49,32 +48,30 @@ find_package(OpenCL)
 find_package(Boost 1.65.0 COMPONENTS system atomic PATHS "${CMAKE_BINARY_DIR}/ext/boost")
 find_package(SDL3 PATHS "${CMAKE_BINARY_DIR}/ext/sdl3")
 find_package(Eigen3 3.3 NO_MODULE PATHS "${CMAKE_BINARY_DIR}/ext/eigen")
-
 find_package(OpenCV PATHS "${CMAKE_BINARY_DIR}/ext/opencv")
+find_path(GLATTER_INCLUDE_DIR
+  glatter/glatter.h
+  PATHS "${CMAKE_BINARY_DIR}/ext/build_glatter-prefix/src/build_glatter/include"
+)
+
+add_subdirectory(ext)
 if (OpenCV_FOUND)
   add_library(opencv INTERFACE)
   target_link_libraries(opencv INTERFACE ${OpenCV_LIBS})
   target_include_directories(opencv SYSTEM INTERFACE ${OpenCV_INCLUDE_DIRS})
 endif()
-
-add_subdirectory(ext)
-
-if (TARGET build_glatter)
+if (GLATTER_INCLUDE_DIR)
   add_library(glatter INTERFACE)
-  ExternalProject_Get_Property(build_glatter SOURCE_DIR)
-  message("SOURCE_DIR=${SOURCE_DIR}")
-  target_include_directories(glatter INTERFACE ${SOURCE_DIR}/include)
+  target_include_directories(glatter SYSTEM INTERFACE "${GLATTER_INCLUDE_DIR}")
 endif()
 
 add_subdirectory(common/draw)
-
 if (GOOPAX_DRAW_WITH_OPENGL OR GOOPAX_DRAW_WITH_METAL AND NOT GOOPAX_DEBUG)
   add(nbody glatter goopax_draw)
   if (APPLE)
     SET_SOURCE_FILES_PROPERTIES( nbody.cpp PROPERTIES LANGUAGE OBJCXX )
   endif()
 endif()
-
 
 add(deep-zoom-mandelbrot Boost::system goopax_draw)
 add(gather)

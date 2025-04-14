@@ -28,7 +28,7 @@ elseif (IOS)
 endif()
 
 
-if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
+if (NOT ANDROID)
   ExternalProject_Add(
     build_sdl3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
@@ -40,10 +40,12 @@ if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
     "-DSDL_ASSEMBLY=0"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/sdl3"
   )
+endif()
+if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
   add_dependencies(build_external_libraries build_sdl3)
 endif()
 
-if (NOT TARGET opencv AND NOT ANDROID)
+if (NOT ANDROID)
   ExternalProject_Add(
     build_opencv
     URL https://github.com/opencv/opencv/archive/refs/tags/4.10.0.zip
@@ -68,10 +70,11 @@ if (NOT TARGET opencv AND NOT ANDROID)
     "-DWITH_FFMPEG=0"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/opencv"
   )
+endif()
+if (NOT OpenCV_FOUND AND NOT ANDROID)
   add_dependencies(build_external_libraries build_opencv)
 endif()
 
-if (NOT TARGET Boost::system)
   ExternalProject_Add(
     build_boost
     GIT_REPOSITORY https://github.com/boostorg/boost.git
@@ -83,11 +86,11 @@ if (NOT TARGET Boost::system)
     CMAKE_ARGS ${MY_CMAKE_ARGS} "${MY_BOOST_ARGS}"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/boost"
   )
+if (NOT TARGET Boost::system)
   add_dependencies(build_external_libraries build_boost)
 endif()
 
 
-if (NOT TARGET Eigen3::Eigen)
   ExternalProject_Add(
     build_eigen
     GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
@@ -97,10 +100,10 @@ if (NOT TARGET Eigen3::Eigen)
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/eigen"
     #INSTALL_COMMAND ""
   )
+if (NOT TARGET Eigen3::Eigen)
   add_dependencies(build_external_libraries build_eigen)
 endif()
 
-if (NOT TARGET glatter)
   ExternalProject_Add(
     build_glatter
     GIT_REPOSITORY https://github.com/imakris/glatter.git
@@ -110,5 +113,6 @@ if (NOT TARGET glatter)
     INSTALL_COMMAND ""
     BUILD_COMMAND ""
   )
+if (NOT GLATTER_INCLUDE_DIR)
   add_dependencies(build_external_libraries build_glatter)
 endif()
