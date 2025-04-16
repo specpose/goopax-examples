@@ -13,7 +13,7 @@ using namespace goopax;
 using namespace std;
 
 // This kernel will gather various values of resource A: sum, min, max, bitwise or.
-Tint main()
+int main()
 {
     goopax_device device = default_device(env_ALL);
 
