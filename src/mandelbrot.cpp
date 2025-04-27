@@ -122,6 +122,7 @@ int main(int, char**)
                 if (num_fingers == 0)
                 {
                     too_many_fingers = false;
+                    moveto = center;
                 }
             }
 

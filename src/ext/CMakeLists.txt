@@ -1,3 +1,4 @@
+add_custom_target(build_external_libraries)
 include(ExternalProject)
 
 set(MY_OPENCV_ARGS "")
@@ -40,13 +41,15 @@ endif()
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
     GIT_TAG ${MY_SDL_GIT_TAG}
     EXCLUDE_FROM_ALL 1
-    #INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdl3"
     CMAKE_ARGS "${MY_CMAKE_ARGS}"
     "-DSDL_SHARED=0"
     "-DSDL_STATIC=1"
     "-DSDL_ASSEMBLY=0"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/sdl3"
   )
+if (NOT SDL3_FOUND)
+  add_dependencies(build_external_libraries build_sdl3)
+endif()
 
   ExternalProject_Add(
     build_opencv
@@ -54,7 +57,6 @@ endif()
     URL https://github.com/opencv/opencv/archive/refs/tags/4.10.0.zip
     URL_HASH SHA256=3810bca2b1d1c572912df0ac3888126341f3762dfd28e91068c805fb656d0e51
     EXCLUDE_FROM_ALL 1
-    #INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/opencv"
     CMAKE_ARGS "${MY_CMAKE_ARGS}"
     "${MY_OPENCV_ARGS}"
     "-DBUILD_ITT=0"
@@ -74,6 +76,9 @@ endif()
     "-DWITH_FFMPEG=0"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/opencv"
   )
+if (NOT OpenCV_FOUND)
+  add_dependencies(build_external_libraries build_opencv)
+endif()
 
   ExternalProject_Add(
     build_boost
@@ -86,30 +91,30 @@ endif()
     CMAKE_ARGS ${MY_CMAKE_ARGS} "${MY_BOOST_ARGS}"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/boost"
   )
+if (NOT Boost_FOUND)
+  add_dependencies(build_external_libraries build_boost)
+endif()
 
   ExternalProject_Add(
     build_eigen
     GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
     GIT_TAG 3.4.0
     EXCLUDE_FROM_ALL 1
-    #INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/eigen"
     CMAKE_ARGS "${MY_CMAKE_ARGS}"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/eigen"
     #INSTALL_COMMAND ""
   )
+if (NOT Eigen3_FOUND)
+  add_dependencies(build_external_libraries build_eigen)
+endif()
 
-  #include(FetchContent)
   ExternalProject_Add(
-  #FetchContent_Declare(
     build_glatter
     GIT_REPOSITORY https://github.com/imakris/glatter.git
     GIT_TAG 886f9765c6553ecb0934b5ec187db7d57ab0cfbc
     EXCLUDE_FROM_ALL 1
-    #OVERRIDE_FIND_PACKAGE
     CONFIGURE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_COMMAND ""
   )
-  #FetchContent_MakeAvailable(fetch_glatter)
-  #FetchContent_Populate(glatter)
-  #FetchContent_GetProperties(glatter SOURCE_DIR)
+add_dependencies(build_external_libraries build_glatter)
