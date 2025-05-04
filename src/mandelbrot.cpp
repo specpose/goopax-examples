@@ -3,9 +3,9 @@
    Mandelbrot example
  */
 
-#include "common/draw/window_sdl.h"
 #include <SDL3/SDL_main.h>
 #include <chrono>
+#include <draw/window_sdl.h>
 #include <goopax_extra/struct_types.hpp>
 
 using namespace goopax;

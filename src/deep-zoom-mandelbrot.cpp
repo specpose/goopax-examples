@@ -3,10 +3,10 @@
    Mandelbrot example program with deep zoom capability.
  */
 
-#include "common/draw/window_sdl.h"
 #include <SDL3/SDL_main.h>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <chrono>
+#include <draw/window_sdl.h>
 #include <goopax_extra/struct_types.hpp>
 
 using namespace goopax;
