@@ -12,7 +12,7 @@ void print_properties(unsigned int props)
 {
     SDL_EnumerateProperties(
         props,
-        [](void* userdata, SDL_PropertiesID props, const char* name) {
+        [](void*, SDL_PropertiesID props, const char* name) {
             cout << name << ": ";
 
             auto type = SDL_GetPropertyType(props, name);

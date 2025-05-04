@@ -11,6 +11,8 @@ if (GOOPAX_DEBUG)
 else()
   target_compile_definitions(goopax_typedefs INTERFACE -DGOOPAX_DEBUG=0)
 endif()
+target_include_directories(goopax_typedefs SYSTEM INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
 
 
 if (TARGET SDL3::SDL3 AND TARGET Eigen3::Eigen)

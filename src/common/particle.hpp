@@ -64,7 +64,7 @@ struct particle_renderer
     particle_renderer(sdl_window_metal& window0)
         : window(window0)
     {
-        device = MTLCreateSystemDefaultDevice();
+        device = static_cast<id<MTLDevice>>(window.device.get_device_ptr());
 
         NSString* progSrc = @"\
 	struct VertexOut {\

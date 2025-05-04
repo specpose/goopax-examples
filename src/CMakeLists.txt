@@ -74,7 +74,7 @@ if (GOOPAX_DRAW_WITH_OPENGL OR GOOPAX_DRAW_WITH_METAL AND NOT GOOPAX_DEBUG)
 endif()
 
 add(deep-zoom-mandelbrot Boost::system goopax_draw)
-add(gather)
+add(gather goopax_typedefs)
 add(mandelbrot goopax_draw)
 add(fft opencv goopax_draw)
 add(svm-pingpong goopax_typedefs)
