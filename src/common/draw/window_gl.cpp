@@ -65,11 +65,7 @@ void sdl_window_gl::draw_goopax(std::function<void(image_buffer<2, Eigen::Vector
         flush_graphics_interop(device);
     }
     SDL_SetRenderTarget(renderer, nullptr);
-    bool ret = SDL_RenderTexture(renderer, texture, nullptr, nullptr);
-    if (!ret)
-    {
-        throw std::runtime_error(std::string("SDL_RenderTexture failed: ") + SDL_GetError());
-    }
+    call_sdl(SDL_RenderTexture(renderer, texture, nullptr, nullptr));
 
     SDL_RenderPresent(renderer);
 }

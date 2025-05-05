@@ -29,12 +29,17 @@ else()
     option(GOOPAX_DRAW_WITH_METAL "with Metal support" 0)
 endif()
 
+option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 1)
+
+
 if  (GOOPAX_DEBUG)
-set(GOOPAX_DRAW_WITH_METAL 0)
-set(GOOPAX_DRAW_WITH_OPENGL 0)
+    set(GOOPAX_DRAW_WITH_METAL 0)
+    set(GOOPAX_DRAW_WITH_OPENGL 0)
+    set(GOOPAX_DRAW_WITH_VULKAN 0)
 endif()
 
 message("OpenGL: ${GOOPAX_DRAW_WITH_OPENGL}")
+message("Vulkan: ${GOOPAX_DRAW_WITH_VULKAN}")
 message("Metal: ${GOOPAX_DRAW_WITH_METAL}")
 
 
@@ -44,6 +49,9 @@ if (GOOPAX_DRAW_WITH_METAL)
 endif()
 if (GOOPAX_DRAW_WITH_OPENGL)
     set(FILES ${FILES} window_gl.h window_gl.cpp)
+endif()
+if (GOOPAX_DRAW_WITH_VULKAN)
+    set(FILES ${FILES} window_vulkan.h window_vulkan.cpp)
 endif()
 
 add_library(goopax_draw ${FILES})
@@ -55,6 +63,12 @@ if (GOOPAX_DRAW_WITH_OPENGL)
     target_link_libraries(goopax_draw PRIVATE OpenGL::GL)
 else()
     target_compile_definitions(goopax_draw PUBLIC -DWITH_OPENGL=0)
+endif()
+
+if (GOOPAX_DRAW_WITH_VULKAN)
+    target_compile_definitions(goopax_draw PUBLIC -DWITH_VULKAN=1)
+else()
+    target_compile_definitions(goopax_draw PUBLIC -DWITH_VULKAN=0)
 endif()
 
 if (GOOPAX_DRAW_WITH_METAL)

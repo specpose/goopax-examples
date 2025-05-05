@@ -1,6 +1,7 @@
 #include "window_sdl.h"
 #include "window_gl.h"
 #include "window_plain.h"
+#include "window_vulkan.h"
 
 #include <goopax>
 
@@ -70,14 +71,8 @@ std::optional<SDL_Event> sdl_window::get_event()
 std::optional<SDL_Event> sdl_window::wait_event()
 {
     SDL_Event e;
-    if (SDL_WaitEvent(&e))
-    {
-        return e;
-    }
-    else
-    {
-        throw std::runtime_error(SDL_GetError());
-    }
+    call_sdl(SDL_WaitEvent(&e));
+    return e;
 }
 
 void sdl_window::set_title(const std::string& title) const
@@ -92,6 +87,17 @@ std::unique_ptr<sdl_window> sdl_window::create(const char* name, Eigen::Vector<T
     {
         cout << "Trying metal." << endl;
         return create_sdl_window_metal(name, size, flags);
+    }
+    catch (std::exception& e)
+    {
+        cout << "Got exception '" << e.what() << "'" << endl;
+    }
+#endif
+#if WITH_VULKAN
+    try
+    {
+        cout << "Trying vulkan." << endl;
+        return std::make_unique<sdl_window_vulkan>(name, size, flags);
     }
     catch (std::exception& e)
     {
@@ -125,12 +131,7 @@ std::unique_ptr<sdl_window> sdl_window::create(const char* name, Eigen::Vector<T
 sdl_window::sdl_window(const char* name, Vector<Tuint, 2> size, uint32_t flags, const char* renderer_name)
 {
     static std::once_flag once;
-    call_once(once, []() {
-        if (!SDL_Init(SDL_INIT_VIDEO))
-        {
-            throw std::runtime_error(SDL_GetError());
-        }
-    });
+    call_once(once, []() { call_sdl(SDL_Init(SDL_INIT_VIDEO)); });
 
     std::atexit([]() { SDL_Quit(); });
 

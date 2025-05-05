@@ -6,6 +6,14 @@
 
 void print_properties(unsigned int props);
 
+inline void call_sdl(bool ok)
+{
+    if (!ok) [[unlikely]]
+    {
+        throw std::runtime_error(SDL_GetError());
+    }
+}
+
 struct sdl_window
 {
     SDL_Window* window = nullptr;

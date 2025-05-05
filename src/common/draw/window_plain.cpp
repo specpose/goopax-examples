@@ -10,10 +10,7 @@ void sdl_window_plain::draw_goopax(std::function<void(image_buffer<2, Eigen::Vec
         throw std::runtime_error(std::string("Cannot create surface: ") + SDL_GetError());
     }
 
-    if (!SDL_LockSurface(surface))
-    {
-        throw std::runtime_error("SDL_LockSurface failed");
-    }
+    call_sdl(SDL_LockSurface(surface));
     if (surface->pitch != surface->w * 4)
     {
         cerr << "Sorry, pixel layout not implemented: pitch=" << surface->pitch << ", width=" << surface->w << endl;
