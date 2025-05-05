@@ -90,7 +90,7 @@ if (TARGET goopax_draw)
     message(STATUS "deep-zoom-mandelbrot dependencies not found: Download with cmake --build build --target build_boost")
   endif()
 
-  find_package(OpenCV PATHS "${CMAKE_BINARY_DIR}/ext/opencv")
+  find_package(OpenCV PATHS "${CMAKE_BINARY_DIR}/ext/opencv" "${CMAKE_BINARY_DIR}/ext/opencv/sdk/native/jni")
   if (OpenCV_FOUND)
     make_goopax_exec(fft)
     target_link_libraries(fft PRIVATE ${OpenCV_LIBS})
