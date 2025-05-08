@@ -83,6 +83,7 @@ int main(int, char**)
 
     complex<double> center = moveto;
     Tdouble speed_zoom = 1E-2;
+    constexpr float timescale = 1; // [in seconds]
 
     bool quit = false;
     bool is_fullscreen = false;
@@ -226,9 +227,10 @@ int main(int, char**)
         auto now = steady_clock::now();
         auto dt = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_draw_time).count();
 
-        center += (moveto - center) * static_cast<double>(max(0.4, abs(speed_zoom) * 1.1) * dt);
+        // center += (moveto - center) * static_cast<double>(max(0.4, abs(speed_zoom) * 1.1) * dt);
+        center += (moveto - center) * (dt * (1.0 / timescale + abs(speed_zoom)));
         scale *= exp(speed_zoom * dt);
-        speed_zoom *= exp(-dt / 10);
+        speed_zoom *= exp(-dt / timescale);
 
         std::array<unsigned int, 2> render_size;
 
