@@ -23,8 +23,6 @@ inline void call_vulkan(VkResult result)
 void sdl_window_vulkan::draw_goopax(std::function<void(image_buffer<2, Eigen::Vector<uint8_t, 4>, true>& image)> func)
 {
 tryagain:
-    std::array<unsigned int, 2> size = get_size();
-
     uint32_t imageIndex;
     auto err = vkAcquireNextImageKHR(vkDevice, swapchain, timeout, nullptr, fence, &imageIndex);
     if (err == VK_ERROR_OUT_OF_DATE_KHR)
