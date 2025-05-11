@@ -28,7 +28,7 @@ tryagain:
     if (err == VK_ERROR_OUT_OF_DATE_KHR)
     {
         cout << "vkAcquireNextImageKHR returned VK_OUT_OF_DATE_KHR" << endl
-             << "Probably the window have been resized." << endl;
+             << "Probably the window has been resized." << endl;
         destroy_swapchain();
         create_swapchain();
         cout << "Trying again." << endl;
@@ -299,7 +299,6 @@ sdl_window_vulkan::sdl_window_vulkan(const char* name, Eigen::Vector<Tuint, 2> s
 
     for (auto& device : devices)
     {
-        this->device = device;
         vkDevice = static_cast<VkDevice>(device.get_device_ptr());
         vkQueue = static_cast<VkQueue>(device.get_device_queue());
         uint32_t queueFamilyIndex = get_vulkan_queue_family_index(device);
@@ -316,10 +315,15 @@ sdl_window_vulkan::sdl_window_vulkan(const char* name, Eigen::Vector<Tuint, 2> s
         if (supported)
         {
             cout << "Using." << endl;
-            goto found_device;
+            this->device = device;
+            break;
         }
     }
-    throw std::runtime_error("Failed to find usable vulkan device");
+
+    if (!this->device.valid())
+    {
+        throw std::runtime_error("Failed to find usable vulkan device");
+    }
 
 found_device:
 
