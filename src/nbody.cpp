@@ -59,7 +59,8 @@ int main(int argc, char** argv)
     (void)argc;
     (void)argv;
     const int N = 65536;
-    const double dt = 5E-3;
+    const float dt = 5E-3;
+    const float mass = 1.0 / N;
 
     unique_ptr<sdl_window> window =
         sdl_window::create("nbody", { 1024, 768 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
@@ -76,11 +77,7 @@ int main(int argc, char** argv)
 
     kernel CalculateForce(
         device,
-        [](const resource<Vector3<float>>& x,
-           resource<Vector3<float>>& v,
-           gpu_float dt,
-           gpu_float mass,
-           resource<Vector3<float>>& xnew) {
+        [dt, mass](const resource<Vector3<float>>& x, resource<Vector3<float>>& v, resource<Vector3<float>>& xnew) {
             Vector3<gpu_float> F = { 0, 0, 0 };
             const gpu_uint i = global_id();
 
@@ -133,7 +130,7 @@ int main(int argc, char** argv)
         static auto frametime = steady_clock::now();
         static Tint framecount = 0;
 
-        goopax_future f = CalculateForce(x, v, dt, 1.0 / x.size(), x2);
+        goopax_future f = CalculateForce(x, v, x2);
         swap(x, x2);
 
         auto now = steady_clock::now();
