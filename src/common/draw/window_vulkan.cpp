@@ -328,8 +328,6 @@ sdl_window_vulkan::sdl_window_vulkan(const char* name,
         throw std::runtime_error("Failed to find usable vulkan device");
     }
 
-found_device:
-
     vector<VkSurfaceFormatKHR> formats;
     {
         uint32_t count;
