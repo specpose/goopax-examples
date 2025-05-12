@@ -62,8 +62,10 @@ int main(int argc, char** argv)
     const float dt = 5E-3;
     const float mass = 1.0 / N;
 
-    unique_ptr<sdl_window> window =
-        sdl_window::create("nbody", { 1024, 768 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    unique_ptr<sdl_window> window = sdl_window::create("nbody",
+                                                       { 1024, 768 },
+                                                       SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY,
+                                                       static_cast<goopax::envmode>(env_ALL & ~env_VULKAN));
     goopax_device device = window->device;
 
 #if WITH_METAL

@@ -80,13 +80,14 @@ void sdl_window::set_title(const std::string& title) const
     SDL_SetWindowTitle(window, title.c_str());
 }
 
-std::unique_ptr<sdl_window> sdl_window::create(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
+std::unique_ptr<sdl_window>
+sdl_window::create(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, goopax::envmode env)
 {
 #if WITH_METAL
     try
     {
         cout << "Trying metal." << endl;
-        return create_sdl_window_metal(name, size, flags);
+        return create_sdl_window_metal(name, size, flags, env);
     }
     catch (std::exception& e)
     {
@@ -94,21 +95,24 @@ std::unique_ptr<sdl_window> sdl_window::create(const char* name, Eigen::Vector<T
     }
 #endif
 #if WITH_VULKAN
-    try
+    if (env & env_VULKAN)
     {
-        cout << "Trying vulkan." << endl;
-        return std::make_unique<sdl_window_vulkan>(name, size, flags);
-    }
-    catch (std::exception& e)
-    {
-        cout << "Got exception '" << e.what() << "'" << endl;
+        try
+        {
+            cout << "Trying vulkan." << endl;
+            return std::make_unique<sdl_window_vulkan>(name, size, flags, env);
+        }
+        catch (std::exception& e)
+        {
+            cout << "Got exception '" << e.what() << "'" << endl;
+        }
     }
 #endif
 #if WITH_OPENGL
     try
     {
         cout << "Trying opengl." << endl;
-        return std::make_unique<sdl_window_gl>(name, size, flags);
+        return std::make_unique<sdl_window_gl>(name, size, flags, env);
     }
     catch (std::exception& e)
     {
@@ -118,7 +122,7 @@ std::unique_ptr<sdl_window> sdl_window::create(const char* name, Eigen::Vector<T
     try
     {
         cout << "Trying plain." << endl;
-        return std::make_unique<sdl_window_plain>(name, size, flags);
+        return std::make_unique<sdl_window_plain>(name, size, flags, env);
     }
     catch (std::exception& e)
     {

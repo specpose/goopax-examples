@@ -46,13 +46,13 @@ void sdl_window_plain::draw_goopax(std::function<void(image_buffer<2, Eigen::Vec
     SDL_DestroySurface(surface);
 }
 
-sdl_window_plain::sdl_window_plain(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
+sdl_window_plain::sdl_window_plain(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, goopax::envmode env)
     : sdl_window(name, size, flags, nullptr)
 {
 #if GOOPAX_DEBUG
     this->device = goopax::default_device(env_CPU);
 #else
-    this->device = goopax::default_device(env_ALL);
+    this->device = goopax::default_device(env);
 #endif
     if (!device.valid())
     {
