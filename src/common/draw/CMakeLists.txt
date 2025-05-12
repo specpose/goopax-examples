@@ -25,12 +25,11 @@ endif()
 
 if (APPLE)
     option(GOOPAX_DRAW_WITH_METAL "with Metal support" 1)
+    option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 0)
 else()
     option(GOOPAX_DRAW_WITH_METAL "with Metal support" 0)
+    option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 1)
 endif()
-
-option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 1)
-
 
 if  (GOOPAX_DEBUG)
     set(GOOPAX_DRAW_WITH_METAL 0)
@@ -67,6 +66,9 @@ endif()
 
 if (GOOPAX_DRAW_WITH_VULKAN)
     target_compile_definitions(goopax_draw PUBLIC -DWITH_VULKAN=1)
+    if (NOT APPLE AND NOT ANDROID)
+      target_include_directories(goopax_draw SYSTEM PUBLIC "${CMAKE_BINARY_DIR}/ext/build_sdl3-prefix/src/build_sdl3/src/video/khronos")
+    endif()
 else()
     target_compile_definitions(goopax_draw PUBLIC -DWITH_VULKAN=0)
 endif()
