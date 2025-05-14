@@ -13,14 +13,14 @@ endif()
 
 if (TARGET SDL3::SDL3 AND TARGET Eigen3::Eigen)
 
-  option(GOOPAX_DRAW_WITH_OPENGL "with OpenGL support" OFF)
+  if(NOT GOOPAX_DRAW_WITH_OPENGL)
   if (TARGET OpenGL::GL)
     if (NOT GOOPAX_DEBUG)
       set(GOOPAX_DRAW_WITH_OPENGL ON)
     endif()
   endif()
 
-  option(GOOPAX_DRAW_WITH_METAL "with Metal support" OFF)
+  if(NOT GOOPAX_DRAW_WITH_METAL)
   if (APPLE)
     if (NOT GOOPAX_DEBUG)
       set(GOOPAX_DRAW_WITH_METAL ON)
