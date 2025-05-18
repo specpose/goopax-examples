@@ -36,7 +36,7 @@ public:
 
 private:
     static std::unique_ptr<sdl_window>
-    create_sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags);
+    create_sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, goopax::envmode env);
 
 public:
     sdl_window(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, const char* renderer_name);
