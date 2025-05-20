@@ -19,6 +19,7 @@ struct fftdata
 
     goopax_device device;
     Vector<Tuint, 2> size;
+    buffer<Vector<uint8_t, 3>> inputbuf;
     buffer<complex<Tfloat>> tmp1;
     buffer<complex<Tfloat>> tmp2;
 
@@ -28,9 +29,8 @@ struct fftdata
     kernel<void()> ifft_y;
     array<kernel<void(image_buffer<2, Vector<Tuint8_t, 4>, true>& frame)>, 3> ifft_x;
 
-    void render(Vector<uint8_t, 3>* input, image_buffer<2, Vector<Tuint8_t, 4>, true>& drawimage)
+    void render(image_buffer<2, Vector<Tuint8_t, 4>, true>& drawimage)
     {
-        const buffer<Vector<uint8_t, 3>> inputbuf(device, size[0] * size[1], input, BUFFER_READ);
         for (unsigned int channel = 0; channel < 3; ++channel)
         {
             fft_x[channel](inputbuf);
@@ -64,8 +64,10 @@ struct fftdata
     fftdata(goopax_device device0, Vector<Tuint, 2> size0)
         : device(device0)
         , size(size0)
+        , inputbuf(device, size[0] * size[1])
         , tmp1(device, size[0] * size[1])
         , tmp2(device, size[0] * size[1])
+
     {
         for (uint channel = 0; channel < 3; ++channel)
         {
@@ -202,7 +204,8 @@ int main(int argc, char** argv)
         assert(frame.elemSize() == 3); // Assuming 24 bit RGB.
 
         window->draw_goopax([&](image_buffer<2, Vector<Tuint8_t, 4>, true>& image) {
-            data->render(reinterpret_cast<Vector<uint8_t, 3>*>(frame.data), image);
+            data->inputbuf.copy_from_host_async(reinterpret_cast<Vector<uint8_t, 3>*>(frame.data));
+            data->render(image);
         });
 
         // Because there are no other synchronization points in this demo
