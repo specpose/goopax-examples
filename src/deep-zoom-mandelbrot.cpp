@@ -59,6 +59,17 @@ template<size_t N>
 using realN = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<N>>;
 using REAL = realN<200>;
 
+namespace std
+{
+// Unfortunately, std::complex often needs a bit of overloading, and its behavior is not strictly specified for
+// non-standard types. The following definition will prevent compile-time errors with apple-clang (and possibly other
+// compilers).
+REAL norm(const complex<REAL>& a)
+{
+    return a.real() * a.real() + a.imag() * a.imag();
+}
+}
+
 Tuint MAX_ITER = 256;
 
 template<typename D, typename E, typename scale_t = REAL, typename window_size_t = unsigned int>
