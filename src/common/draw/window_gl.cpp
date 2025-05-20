@@ -70,10 +70,10 @@ void sdl_window_gl::draw_goopax(std::function<void(image_buffer<2, Eigen::Vector
     SDL_RenderPresent(renderer);
 }
 
-sdl_window_gl::sdl_window_gl(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
+sdl_window_gl::sdl_window_gl(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, goopax::envmode env)
     : sdl_window(name, size, flags | SDL_WINDOW_OPENGL, "opengl")
 {
-    auto devices = goopax::get_devices_from_gl();
+    auto devices = goopax::get_devices_from_gl(env);
     if (devices.empty())
     {
         throw std::runtime_error("Cannot create goopax device for opengl");

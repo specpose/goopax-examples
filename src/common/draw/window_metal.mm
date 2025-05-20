@@ -2,7 +2,7 @@
 using namespace std;
 
 std::unique_ptr<sdl_window>
-sdl_window::create_sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
+sdl_window::create_sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, goopax::envmode env)
 {
     return std::make_unique<sdl_window_metal>(name, size, flags);
 }
@@ -34,7 +34,7 @@ void sdl_window_metal::cleanup()
 {
 }
 
-sdl_window_metal::sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
+sdl_window_metal::sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, goopax::envmode env)
     : sdl_window(name, size, flags | SDL_WINDOW_METAL, "metal")
 {
     try
@@ -56,7 +56,7 @@ sdl_window_metal::sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> siz
     {
         const auto* mtldevice = swapchain.device;
         cout << "mtldevice=" << mtldevice << endl;
-        for (auto& device : goopax::devices(goopax::env_METAL))
+        for (auto& device : goopax::devices(static_cast<goopax::envmode>(env & goopax::env_METAL)))
         {
             cout << "have device: " << device.name() << ", ptr=" << device.get_device_ptr() << flush;
             if (device.get_device_ptr() == mtldevice)

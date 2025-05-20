@@ -21,7 +21,10 @@ private:
     void cleanup();
 
 public:
-    sdl_window_metal(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags = 0);
+    sdl_window_metal(const char* name,
+                     Eigen::Vector<Tuint, 2> size,
+                     uint32_t flags = 0,
+                     goopax::envmode env = goopax::env_GPU);
     ~sdl_window_metal();
 };
 #endif
