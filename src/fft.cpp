@@ -11,7 +11,7 @@
 
 using namespace goopax;
 using namespace std;
-using namespace Eigen;
+using Eigen::Vector;
 
 struct fftdata
 {

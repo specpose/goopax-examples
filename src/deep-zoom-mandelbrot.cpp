@@ -11,7 +11,7 @@
 
 using namespace goopax;
 using namespace std;
-using namespace Eigen;
+using Eigen::Vector;
 using goopax::interface::PI;
 using std::chrono::duration;
 using std::chrono::steady_clock;
