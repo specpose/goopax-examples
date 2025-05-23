@@ -10,15 +10,6 @@
 #include <thread>
 
 #if __cpp_lib_atomic_ref >= 201806
-using std::atomic_ref;
-using std::memory_order_acquire;
-using std::memory_order_release;
-#define HAVE_ATOMIC_REF 1
-#elif __has_include(<boost/atomic.hpp>)
-#include <boost/atomic.hpp>
-using boost::atomic_ref;
-using boost::memory_order_acquire;
-using boost::memory_order_release;
 #define HAVE_ATOMIC_REF 1
 #else
 #define HAVE_ATOMIC_REF 0
@@ -90,11 +81,11 @@ void pingpong()
 #if HAVE_ATOMIC_REF
     cout << "player " << devices.size() << ": host program" << endl;
     kernels.push_back([my_id = devices.size()](T* ptr, T* data, unsigned int number_of_players, T N) {
-        atomic_ref<T> ref(*ptr);
+        std::atomic_ref<T> ref(*ptr);
         for (unsigned int expect = my_id; expect < N; expect += number_of_players)
         {
             //  Waiting for our turn.
-            while (ref.load(memory_order_acquire) != expect)
+            while (ref.load(std::memory_order_acquire) != expect)
             {
             }
 
@@ -107,7 +98,7 @@ void pingpong()
             }
 
             // Handing over to the next id.
-            ref.store(expect + 1, memory_order_release);
+            ref.store(expect + 1, std::memory_order_release);
         }
     });
 #endif
