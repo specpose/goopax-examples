@@ -154,7 +154,10 @@ tryagain:
         }
         else if (err == VK_SUBOPTIMAL_KHR)
         {
-            cout << "vkQueuePresentKHR returned VK_SUBOPTIMAL_KHR" << endl;
+            cout << "vkQueuePresentKHR returned VK_SUBOPTIMAL_KHR" << endl
+                 << "Probably the window has been resized." << endl;
+            destroy_swapchain();
+            create_swapchain();
         }
         else
         {
@@ -243,10 +246,7 @@ void sdl_window_vulkan::destroy_swapchain()
     vkDestroySwapchainKHR(vkDevice, swapchain, nullptr);
 }
 
-sdl_window_vulkan::sdl_window_vulkan(const char* name,
-                                     Eigen::Vector<Tuint, 2> size,
-                                     uint32_t flags,
-                                     goopax::envmode env)
+sdl_window_vulkan::sdl_window_vulkan(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags)
     : sdl_window(name, size, flags | SDL_WINDOW_VULKAN, nullptr)
 {
     vector<const char*> extensions;
@@ -264,6 +264,8 @@ sdl_window_vulkan::sdl_window_vulkan(const char* name,
 
     cout << "Getting devices." << endl;
     vector<goopax_device> devices = get_devices_from_vulkan(nullptr, extensions, { "VK_KHR_swapchain" });
+
+    cout << "devices.size()=" << devices.size() << endl;
 
     if (devices.empty())
     {
@@ -302,26 +304,25 @@ sdl_window_vulkan::sdl_window_vulkan(const char* name,
 
     for (auto& device : devices)
     {
-        vkDevice = static_cast<VkDevice>(device.get_device_ptr());
-        vkQueue = static_cast<VkQueue>(device.get_device_queue());
         uint32_t queueFamilyIndex = get_vulkan_queue_family_index(device);
-
-        cout << "have device: " << device.name() << ", VkDevice: " << vkDevice << ", queue=" << vkQueue
-             << ", queueFamilyIndex=" << queueFamilyIndex << endl;
 
         VkBool32 supported;
 
         call_vulkan(vkGetPhysicalDeviceSurfaceSupportKHR(
             get_vulkan_physical_device(device), queueFamilyIndex, surface, &supported));
 
-        cout << "supported=" << supported << endl;
-        if (supported)
+        cout << "have device: " << device.name() << ". supported=" << supported;
+
+        if (supported && !this->device.valid())
         {
-            cout << "Using." << endl;
+            cout << ". Using.";
             this->device = device;
-            break;
+            vkDevice = static_cast<VkDevice>(device.get_device_ptr());
+            vkQueue = static_cast<VkQueue>(device.get_device_queue());
         }
+        cout << endl;
     }
+    cout << endl;
 
     if (!this->device.valid())
     {

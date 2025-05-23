@@ -100,7 +100,7 @@ sdl_window::create(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flag
         try
         {
             cout << "Trying vulkan." << endl;
-            return std::make_unique<sdl_window_vulkan>(name, size, flags, env);
+            return std::make_unique<sdl_window_vulkan>(name, size, flags);
         }
         catch (std::exception& e)
         {

@@ -49,10 +49,7 @@ class sdl_window_vulkan : public sdl_window
     void destroy_swapchain();
 
 public:
-    sdl_window_vulkan(const char* name,
-                      Eigen::Vector<Tuint, 2> size,
-                      uint32_t flags = 0,
-                      goopax::envmode env = goopax::env_GPU);
+    sdl_window_vulkan(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags = 0);
     ~sdl_window_vulkan();
 };
 #endif
