@@ -59,7 +59,7 @@ endif()
     "-DSDL_ASSEMBLY=0"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/sdl3"
   )
-if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
+if (NOT TARGET SDL3::SDL3)
   add_dependencies(build_external_libraries build_sdl3)
 endif()
 

@@ -57,6 +57,6 @@ Set the PATH variable so that both ninja and corresponding cmake are found.
 
     export PATH=$HOME/Android/Sdk/cmake/3.22.1/bin:$PATH
 
-This represents the minimal system requirements to build the text-based examples.
+This represents the minimal system requirements to build both the text-based examples and the sdl based examples.
 
-    build_type="release" ABI="arm64-v8a" android_ndk="$HOME/Android/Sdk/ndk/27.0.12077973" bash -c './build-all.sh -G "Ninja" -DCMAKE_SYSTEM_NAME="Android" -DCMAKE_ANDROID_ARCH_ABI="$ABI" -DCMAKE_ANDROID_NDK="$android_ndk" -DCMAKE_FIND_ROOT_PATH="$PWD/../;$PWD/build/$build_type/$ABI/ext/boost;$PWD/build/$build_type/$ABI/ext/opencv/sdk/native/jni;$PWD/build/$build_type/$ABI/ext/eigen" -DGOOPAX_DRAW_WITH_OPENGL=0 -DGOOPAX_DRAW_WITH_METAL=0 -DGOOPAX_DRAW_WITH_VULKAN=1'
+    build_type="release" ABI="arm64-v8a" platform_version_string="android-28" android_ndk="$HOME/Android/Sdk/ndk/27.0.12077973" bash -c './build-all.sh -G "Ninja" -DCMAKE_SYSTEM_NAME="Android" -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="$platform_version_string" -DANDROID_NDK="$android_ndk" -DCMAKE_TOOLCHAIN_FILE="$android_ndk/build/cmake/android.toolchain.cmake" -DCMAKE_FIND_ROOT_PATH="$PWD/../;$PWD/build/$build_type/$ABI/ext/boost;$PWD/build/$build_type/$ABI/ext/opencv/sdk/native/jni;$PWD/build/$build_type/$ABI/ext/eigen;$PWD/build/$build_type/$ABI/ext/sdl3" -DGOOPAX_DRAW_WITH_OPENGL=0 -DGOOPAX_DRAW_WITH_METAL=0 -DGOOPAX_DRAW_WITH_VULKAN=1'
