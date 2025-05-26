@@ -84,6 +84,10 @@ add(matmul Eigen3::Eigen goopax_typedefs)
 add(cl-interop-1 OpenCL::OpenCL)
 add(cl-interop-2 OpenCL::OpenCL)
 
+if (TARGET mandelbrot)
+  target_compile_definitions(mandelbrot PUBLIC -DGOOPAX_ALLOW_DEPRECATED_DEVICES=1)
+endif()
+
 if (APPLE AND TARGET nbody)
   SET_SOURCE_FILES_PROPERTIES( nbody.cpp PROPERTIES LANGUAGE OBJCXX )
 endif()
