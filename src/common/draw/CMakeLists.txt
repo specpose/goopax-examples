@@ -27,14 +27,14 @@ endif()
 
 if (APPLE)
     option(GOOPAX_DRAW_WITH_METAL "with Metal support" 1)
+    option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 0)
 else()
     option(GOOPAX_DRAW_WITH_METAL "with Metal support" 0)
+    option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 1)
 endif()
 
-if (NOT Vulkan_INCLUDE_DIRS STREQUAL "Vulkan_INCLUDE_DIRS-NOTFOUND")
-    option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 1)
-else()
-    option(GOOPAX_DRAW_WITH_VULKAN "with Vulkan support" 0)
+if (NOT Vulkan_INCLUDE_DIRS)
+    set(GOOPAX_DRAW_WITH_VULKAN 0)
 endif()
 
 if  (GOOPAX_DEBUG)
