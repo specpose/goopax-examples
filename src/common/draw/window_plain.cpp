@@ -28,8 +28,17 @@ void sdl_window_plain::draw_goopax(std::function<void(image_buffer<2, Eigen::Vec
         if (false)
         {
             // Mapping directly to surface pointer. Does not seem to work, except for env_CPU."
+            array<unsigned int, 1> pitch =
+                image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true>::get_host_ptr_pitchdim(device, size);
+            cout << "pitch=" << pitch[0] << ", size=" << size[0] << "," << size[1] << endl;
+            if (pitch[0] != size[0])
+            {
+                cout << "Wrong pitch!" << endl;
+                abort();
+            }
+
             image_buffer<2, Eigen::Vector<Tuint8_t, 4>, true> image(
-                device, size, BUFFER_READ_WRITE, reinterpret_cast<Eigen::Vector<Tuint8_t, 4>*>(surface->pixels));
+                device, size, reinterpret_cast<Eigen::Vector<Tuint8_t, 4>*>(surface->pixels), pitch);
             func(image);
             device.wait_all();
         }
