@@ -82,17 +82,11 @@ int main(int, char**)
     double scale = 2.0;
 
     complex<double> center = moveto;
-    Tdouble speed_zoom = 1E-2;
+    double speed_zoom = 1E-2;
     constexpr float timescale = 1; // [in seconds]
 
     bool quit = false;
     bool is_fullscreen = false;
-
-    bool fingermotion_active = false;
-    bool too_many_fingers = false;
-    int num_fingers = 0;
-    Vector<float, 2> last_fingermotion;
-    Tfloat last_finger_distance;
 
     auto last_draw_time = steady_clock::now();
     auto last_fps_time = last_draw_time;
@@ -100,99 +94,60 @@ int main(int, char**)
 
     map<SDL_FingerID, Vector<float, 2>> finger_positions;
 
+    auto get_finger_cm = [&]() -> Vector<float, 2> {
+        Vector<float, 2> ret = { 0, 0 };
+        for (auto& f : finger_positions)
+        {
+            ret += f.second;
+        }
+        return ret / finger_positions.size();
+    };
+
+    Vector<float, 2> last_finger_cm;
+    Tfloat last_finger_distance;
+
     while (!quit)
     {
+        std::array<unsigned int, 2> window_size = window->get_size();
+        bool finger_change = false;
         while (auto e = window->get_event())
         {
-            std::array<unsigned int, 2> window_size = window->get_size();
             if (e->type == SDL_EVENT_QUIT)
             {
                 quit = true;
             }
             else if (e->type == SDL_EVENT_FINGER_DOWN)
             {
-                ++num_fingers;
-                cout << "num_fingers=" << num_fingers << endl;
-                if (num_fingers == 2)
-                {
-                    too_many_fingers = true;
-                }
-                fingermotion_active = false;
                 finger_positions.insert({ e->tfinger.fingerID, { e->tfinger.x, e->tfinger.y } });
-                last_finger_distance = 0;
+                finger_change = true;
             }
             else if (e->type == SDL_EVENT_FINGER_UP)
             {
-                --num_fingers;
-                cout << "num_fingers=" << num_fingers << endl;
-                if (num_fingers == 0)
-                {
-                    too_many_fingers = false;
-                    moveto = center;
-                }
                 finger_positions.erase(e->tfinger.fingerID);
+                finger_change = true;
             }
 
             else if (e->type == SDL_EVENT_FINGER_MOTION)
             {
-                cout << "fingermotion. fingerID=" << e->tfinger.fingerID << ", x=" << e->tfinger.x
-                     << ", y=" << e->tfinger.y << endl;
-
-                if (fingermotion_active && !too_many_fingers)
-                {
-                    const complex<double> shift =
-                        calc_c(center,
-                               scale,
-                               { e->tfinger.x * window_size[0], e->tfinger.y * window_size[1] },
-                               window_size)
-                        - calc_c(center,
-                                 scale,
-                                 { last_fingermotion[0] * window_size[0], last_fingermotion[1] * window_size[1] },
-                                 window_size);
-                    cout << "shift=" << shift << endl;
-
-                    center -= shift;
-                    moveto -= shift;
-                    center = clamp_range(center);
-                    moveto = clamp_range(moveto);
-                }
-                last_fingermotion = { e->tfinger.x, e->tfinger.y };
-                fingermotion_active = true;
                 finger_positions[e->tfinger.fingerID] = { e->tfinger.x, e->tfinger.y };
             }
             else if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
             {
                 float x = 0, y = 0;
                 SDL_GetMouseState(&x, &y);
-                cout << "Mouse button " << e->button.button << ". x=" << x << ", y=" << y << endl;
 
-                if (true)
-                {
-
-                    moveto = calc_c(center,
-                                    scale, // Set new center
-                                    { x, y },
-                                    window_size);
-                    cout.precision(20);
-                    moveto = clamp_range(moveto);
-                    cout << "new center=" << moveto << ", scale=" << scale << endl;
-                }
+                moveto = calc_c(center,
+                                scale, // Set new center
+                                { x, y },
+                                window_size);
+                moveto = clamp_range(moveto);
             }
             else if (e->type == SDL_EVENT_MOUSE_WHEEL)
             {
                 speed_zoom -= e->wheel.y;
             }
-            /*            else if (e->type == SDL_MULTIGESTURE)
-                        {
-                            if (fabs(e->mgesture.dDist) > 0.002)
-                            {
-                                speed_zoom -= 10 * e->mgesture.dDist;
-                            }
-                        }
-            */
             else if (e->type == SDL_EVENT_KEY_DOWN)
             {
-                cout << "keydown. sym=" << e->key.key << ", name=" << SDL_GetKeyName(e->key.key) << endl;
                 switch (e->key.key)
                 {
                     case SDLK_ESCAPE:
@@ -213,21 +168,44 @@ int main(int, char**)
             }
         }
 
-        if (num_fingers == 2)
+        if (!finger_positions.empty())
         {
-            float finger_distance = (finger_positions.begin()->second - next(finger_positions.begin())->second).norm();
-            if (last_finger_distance != 0)
+            if (finger_positions.size() == 2)
             {
-                float factor = finger_distance / last_finger_distance;
-                speed_zoom -= log(factor);
+                // 2 finger zoom
+                float finger_distance =
+                    (finger_positions.begin()->second - next(finger_positions.begin())->second).norm();
+                if (!finger_change)
+                {
+                    float factor = finger_distance / last_finger_distance;
+                    speed_zoom -= log(factor);
+                }
+                last_finger_distance = finger_distance;
             }
-            last_finger_distance = finger_distance;
+
+            Vector<float, 2> finger_cm = get_finger_cm();
+            if (!finger_change)
+            {
+                // dragging with one or multiple fingers
+
+                const complex<double> shift =
+                    calc_c(center, scale, { finger_cm[0] * window_size[0], finger_cm[1] * window_size[1] }, window_size)
+                    - calc_c(center,
+                             scale,
+                             { last_finger_cm[0] * window_size[0], last_finger_cm[1] * window_size[1] },
+                             window_size);
+
+                center -= shift;
+                moveto -= shift;
+                center = clamp_range(center);
+                moveto = clamp_range(moveto);
+            }
+            last_finger_cm = finger_cm;
         }
 
         auto now = steady_clock::now();
         auto dt = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_draw_time).count();
 
-        // center += (moveto - center) * static_cast<double>(max(0.4, abs(speed_zoom) * 1.1) * dt);
         center += (moveto - center) * (dt * (1.0 / timescale + abs(speed_zoom)));
         scale *= exp(speed_zoom * dt);
         speed_zoom *= exp(-dt / timescale);

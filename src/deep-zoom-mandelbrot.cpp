@@ -82,16 +82,25 @@ complex<D> calc_c(complex<D> center, scale_t scale, Vector<E, 2> position, windo
                  * complex<D>(position[0] - window_size[0] * 0.5f, position[1] - window_size[1] * 0.5f);
 }
 
-complex<REAL> moveto = {
-    REAL("-1."
-         "2603623238862161410225762753413208710717617498969566568620680540827846649972224086588936456568544934106441786"
-         "339417760037065256521411260061136660887905828358899285625388641156809047832482164262411671"),
-    REAL("-0."
-         "3553257536319313812280478909820294005717444145506363484173742044027446521308091651532591805538781639164678355"
-         "9812469373640793642356376154715067642695987014146996961508736162323693119329311610190435137")
+vector<pair<double, complex<REAL>>> demo_positions = {
+    pair<double, complex<REAL>>{
+        2E-67,
+        { REAL("-1."
+               "2603623238862161410225762753413208710717617498969566568620680540827846649972224086588936456568544934106"
+               "441786"
+               "339417760037065256521411260061136660887905828358899285625388641156809047832482164262411671"),
+          REAL("-0."
+               "3553257536319313812280478909820294005717444145506363484173742044027446521308091651532591805538781639164"
+               "678355"
+               "9812469373640793642356376154715067642695987014146996961508736162323693119329311610190435137") } },
+    pair<double, complex<REAL>>{ 1E-47,
+                                 { REAL("-1.9999544106096404893787496123524314099930740287004"),
+                                   REAL("-1.3841877004706694863456346411324859644854130600521e-09") } }
 };
 
-pair<double, double> scalerange = { 2, 2E-67 };
+complex<REAL> moveto = demo_positions[0].second;
+
+pair<double, double> scalerange = { 2, demo_positions[0].first };
 
 double deltat = 92;
 bool manual_mode = false;
@@ -100,6 +109,8 @@ realN<10> scale = 2.4161963835763931682e-3f;
 
 complex<REAL> center = moveto;
 float speed_zoom = 1E-2;
+constexpr float timescale = 1; // [in seconds]
+
 auto mandelbrot_lasttime = steady_clock::now();
 auto mandelbrot_timebegin = steady_clock::now();
 
@@ -178,9 +189,9 @@ public:
         {
             float dt = duration<float>(now - mandelbrot_lasttime).count();
 
-            center += (moveto - center) * complex<REAL>(max(0.4, abs(speed_zoom) * 1.1) * dt);
+            center += (moveto - center) * complex<REAL>(dt * (1.0 / timescale + abs(speed_zoom)));
             scale *= exp(speed_zoom * dt);
-            speed_zoom *= exp(-dt / 10);
+            speed_zoom *= exp(-dt / timescale);
         }
         mandelbrot_lasttime = now;
 
@@ -324,6 +335,13 @@ public:
     }
 };
 
+static const array<complex<REAL>, 2> max_allowed_range = { { { -2, -2 }, { 2, 2 } } };
+static complex<REAL> clamp_range(const complex<REAL>& x)
+{
+    return { std::clamp(x.real(), max_allowed_range[0].real(), max_allowed_range[1].real()),
+             std::clamp(x.imag(), max_allowed_range[0].imag(), max_allowed_range[1].imag()) };
+}
+
 int main(int, char**)
 {
     shared_ptr<sdl_window> window = sdl_window::create("deep zoom mandelbrot",
@@ -335,66 +353,46 @@ int main(int, char**)
     bool quit = false;
     bool is_fullscreen = false;
 
-    bool fingermotion_active = false;
-    bool too_many_fingers = false;
-    int num_fingers = 0;
-    Vector<float, 2> last_fingermotion;
+    map<SDL_FingerID, Vector<float, 2>> finger_positions;
+
+    auto get_finger_cm = [&]() -> Vector<float, 2> {
+        Vector<float, 2> ret = { 0, 0 };
+        for (auto& f : finger_positions)
+        {
+            ret += f.second;
+        }
+        return ret / finger_positions.size();
+    };
+
+    Vector<float, 2> last_finger_cm;
+    Tfloat last_finger_distance;
 
     mandelbrot Mandelbrot(window);
 
     while (!quit)
     {
+        std::array<unsigned int, 2> window_size = window->get_size();
+        bool finger_change = false;
         while (auto e = window->get_event())
         {
-            array<unsigned int, 2> window_size = window->get_size();
             if (e->type == SDL_EVENT_QUIT)
             {
                 quit = true;
             }
             else if (e->type == SDL_EVENT_FINGER_DOWN)
             {
-                ++num_fingers;
-                cout << "num_fingers=" << num_fingers << endl;
-                if (num_fingers == 2)
-                {
-                    too_many_fingers = true;
-                }
-                fingermotion_active = false;
+                finger_positions.insert({ e->tfinger.fingerID, { e->tfinger.x, e->tfinger.y } });
+                finger_change = true;
             }
             else if (e->type == SDL_EVENT_FINGER_UP)
             {
-                --num_fingers;
-                cout << "num_fingers=" << num_fingers << endl;
-                if (num_fingers == 0)
-                {
-                    too_many_fingers = false;
-                    moveto = center;
-                }
+                finger_positions.erase(e->tfinger.fingerID);
+                finger_change = true;
             }
 
             else if (e->type == SDL_EVENT_FINGER_MOTION)
             {
-                cout << "fingermotion. x=" << e->tfinger.x << ", y=" << e->tfinger.y << endl;
-
-                if (fingermotion_active && !too_many_fingers)
-                {
-                    const complex<REAL> shift =
-                        calc_c(center,
-                               scale,
-                               Vector<double, 2>{ e->tfinger.x * window_size[0], e->tfinger.y * window_size[1] },
-                               window_size)
-                        - calc_c(center,
-                                 scale,
-                                 Vector<double, 2>{ last_fingermotion[0] * window_size[0],
-                                                    last_fingermotion[1] * window_size[1] },
-                                 window_size);
-                    cout << "shift=" << shift << endl;
-
-                    center -= shift;
-                    moveto -= shift;
-                }
-                last_fingermotion = { e->tfinger.x, e->tfinger.y };
-                fingermotion_active = true;
+                finger_positions[e->tfinger.fingerID] = { e->tfinger.x, e->tfinger.y };
             }
 
             else if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
@@ -403,34 +401,22 @@ int main(int, char**)
                 SDL_GetMouseState(&x, &y);
                 cout << "Mouse button " << e->button.button << ". x=" << x << ", y=" << y << endl;
 
-                if (true)
-                {
-
-                    moveto = calc_c<REAL>(center,
-                                          scale, // Set new center
-                                          Vector<double, 2>{ x, y },
-                                          window_size);
-                    cout.precision(max(int(-log10(scale)) + 5, 5));
-                    cout << "new center=" << moveto;
-                    cout.precision(10);
-                    cout << ", scale=" << scale << endl;
-                    manual_mode = true;
-                }
+                moveto = calc_c<REAL>(center,
+                                      scale, // Set new center
+                                      Vector<double, 2>{ x, y },
+                                      window_size);
+                moveto = clamp_range(moveto);
+                cout.precision(max(int(-log10(scale)) + 5, 5));
+                cout << "new center=" << moveto;
+                cout.precision(10);
+                cout << ", scale=" << scale << endl;
+                manual_mode = true;
             }
             else if (e->type == SDL_EVENT_MOUSE_WHEEL)
             {
                 speed_zoom -= e->wheel.y;
                 manual_mode = true;
             }
-            /*
-              else if (e->type == SDL_MULTIGESTURE)
-                {
-                    if (fabs(e->mgesture.dDist) > 0.002)
-                    {
-                        speed_zoom -= 10 * e->mgesture.dDist;
-                    }
-                }
-            */
 
             else if (e->type == SDL_EVENT_KEY_DOWN)
             {
@@ -453,6 +439,46 @@ int main(int, char**)
                 };
             }
         }
+
+        if (!finger_positions.empty())
+        {
+            if (finger_positions.size() == 2)
+            {
+                // 2 finger zoom
+                float finger_distance =
+                    (finger_positions.begin()->second - next(finger_positions.begin())->second).norm();
+                if (!finger_change)
+                {
+                    float factor = finger_distance / last_finger_distance;
+                    speed_zoom -= log(factor);
+                }
+                last_finger_distance = finger_distance;
+            }
+
+            Vector<float, 2> finger_cm = get_finger_cm();
+            if (!finger_change)
+            {
+                // dragging with one or multiple fingers
+
+                const complex<REAL> shift =
+                    calc_c(center,
+                           scale,
+                           Vector<double, 2>{ finger_cm[0] * window_size[0], finger_cm[1] * window_size[1] },
+                           window_size)
+                    - calc_c(
+                        center,
+                        scale,
+                        Vector<double, 2>{ last_finger_cm[0] * window_size[0], last_finger_cm[1] * window_size[1] },
+                        window_size);
+
+                center -= shift;
+                moveto -= shift;
+                center = clamp_range(center);
+                moveto = clamp_range(moveto);
+            }
+            last_finger_cm = finger_cm;
+        }
+
         Mandelbrot.render();
     }
     return 0;
