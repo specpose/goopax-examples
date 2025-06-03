@@ -82,37 +82,44 @@ complex<D> calc_c(complex<D> center, scale_t scale, Vector<E, 2> position, windo
                  * complex<D>(position[0] - window_size[0] * 0.5f, position[1] - window_size[1] * 0.5f);
 }
 
-vector<pair<double, complex<REAL>>> demo_positions = {
-    pair<double, complex<REAL>>{
-        2E-67,
-        { REAL("-1."
-               "2603623238862161410225762753413208710717617498969566568620680540827846649972224086588936456568544934106"
-               "441786"
-               "339417760037065256521411260061136660887905828358899285625388641156809047832482164262411671"),
-          REAL("-0."
-               "3553257536319313812280478909820294005717444145506363484173742044027446521308091651532591805538781639164"
-               "678355"
-               "9812469373640793642356376154715067642695987014146996961508736162323693119329311610190435137") } },
-    pair<double, complex<REAL>>{ 1E-47,
-                                 { REAL("-1.9999544106096404893787496123524314099930740287004"),
-                                   REAL("-1.3841877004706694863456346411324859644854130600521e-09") } }
+struct demo_position_t
+{
+    double scale_begin;
+    double scale_end;
+    complex<REAL> center;
 };
 
-complex<REAL> moveto = demo_positions[0].second;
+const vector<demo_position_t> demo_positions = {
+    { 2,
+      2E-67,
+      { REAL("-1."
+             "2603623238862161410225762753413208710717617498969566568620680540827846649972224086588936456568544934106"
+             "441786"
+             "339417760037065256521411260061136660887905828358899285625388641156809047832482164262411671"),
+        REAL("-0."
+             "3553257536319313812280478909820294005717444145506363484173742044027446521308091651532591805538781639164"
+             "678355"
+             "9812469373640793642356376154715067642695987014146996961508736162323693119329311610190435137") } },
+    { 2,
+      1.5E-45,
+      { REAL("-1.9999544106096404893787496123524314099930740287004"),
+        REAL("-1.3841877004706694863456346411324859644854130600521e-09") } }
+};
 
-pair<double, double> scalerange = { 2, demo_positions[0].first };
+unsigned int last_demo_mode = 0;
+const demo_position_t* demo_mode = &demo_positions[last_demo_mode];
 
-double deltat = 92;
-bool manual_mode = false;
+duration<double> deltat = 180s;
 
 realN<10> scale = 2.4161963835763931682e-3f;
 
+complex<REAL> moveto = demo_mode->center;
 complex<REAL> center = moveto;
 float speed_zoom = 1E-2;
 constexpr float timescale = 1; // [in seconds]
 
 auto mandelbrot_lasttime = steady_clock::now();
-auto mandelbrot_timebegin = steady_clock::now();
+auto mandelbrot_timebegin = steady_clock::now() + 2s;
 
 class mandelbrot
 {
@@ -176,14 +183,12 @@ public:
             frametime = now;
         }
 
-        if (!manual_mode)
+        if (demo_mode)
         {
-            double wait = 1;
-            auto t = (duration<double>(now - mandelbrot_timebegin).count() - wait) / (deltat - wait);
-            t = max(t, 0.);
-            t = min(t, 1.);
-            double x = 0.5 - 0.5 * cos(t * PI);
-            scale = realN<10>(exp(log(scalerange.first) * (1 - x) + log(scalerange.second) * x));
+            double t = (now - mandelbrot_timebegin) / deltat;
+            t = clamp(t, 0., 1.);
+            double x = 0.5 - 0.5 * cos(2 * t * PI);
+            scale = realN<10>(exp(log(demo_mode->scale_begin) * (1 - x) + log(demo_mode->scale_end) * x));
         }
         else
         {
@@ -368,6 +373,7 @@ int main(int, char**)
     Tfloat last_finger_distance;
 
     mandelbrot Mandelbrot(window);
+    auto last_manual_action = steady_clock::now();
 
     while (!quit)
     {
@@ -383,6 +389,9 @@ int main(int, char**)
             {
                 finger_positions.insert({ e->tfinger.fingerID, { e->tfinger.x, e->tfinger.y } });
                 finger_change = true;
+
+                demo_mode = nullptr;
+                last_manual_action = steady_clock::now();
             }
             else if (e->type == SDL_EVENT_FINGER_UP)
             {
@@ -410,12 +419,16 @@ int main(int, char**)
                 cout << "new center=" << moveto;
                 cout.precision(10);
                 cout << ", scale=" << scale << endl;
-                manual_mode = true;
+
+                demo_mode = nullptr;
+                last_manual_action = steady_clock::now();
             }
             else if (e->type == SDL_EVENT_MOUSE_WHEEL)
             {
                 speed_zoom -= e->wheel.y;
-                manual_mode = true;
+
+                demo_mode = nullptr;
+                last_manual_action = steady_clock::now();
             }
 
             else if (e->type == SDL_EVENT_KEY_DOWN)
@@ -477,6 +490,15 @@ int main(int, char**)
                 moveto = clamp_range(moveto);
             }
             last_finger_cm = finger_cm;
+        }
+
+        if (steady_clock::now() - last_manual_action > deltat)
+        {
+            mandelbrot_timebegin = last_manual_action = steady_clock::now();
+            demo_mode = &demo_positions[++last_demo_mode % demo_positions.size()];
+            cout << "demo mode " << last_demo_mode << " / " << demo_positions.size() << endl;
+            moveto = center = demo_mode->center;
+            MAX_ITER = 256;
         }
 
         Mandelbrot.render();
