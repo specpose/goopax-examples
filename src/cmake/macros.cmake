@@ -41,6 +41,14 @@ macro(add_withfile P FN)
     if (IOS)
       set_apple_properties(${P})
     endif()
+
+    if (WIN32)
+      add_custom_command(
+	TARGET ${P} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"${goopax_DIR}/../../../lib/libgoopax64.dll"
+	"$<TARGET_FILE_DIR:${P}>")
+    endif()
   else()
     message("not building target ${P} [missing: ${missing}]")
   endif()
