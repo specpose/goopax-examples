@@ -105,10 +105,6 @@ struct matmul
         }
 
         kernel_simple.assign(device, [this]() {
-            const_resource A(this->A);
-            const_resource B(this->B);
-            resource C(this->C);
-
             gpu_for_group(0, Nk, [&](gpu_uint k) {
                 gpu_for_local(0, Nm, [&](gpu_uint m) {
                     gpu_c_float_type sum = static_cast<c_float_type>(0);
@@ -128,10 +124,6 @@ struct matmul
         if (device.support_warp_matrix<ab_float_type, c_float_type>(bk, bm, bl))
         {
             kernel_tensor.assign(device, [this, bk, bl, bm]() {
-                const_resource A(this->A);
-                const_resource B(this->B);
-                resource C(this->C);
-
                 assert(Nk % bk == 0);
                 assert(Nl % bl == 0);
                 assert(Nm % bm == 0);
