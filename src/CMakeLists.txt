@@ -70,6 +70,11 @@ if (GOOPAX_DRAW_WITH_OPENGL OR GOOPAX_DRAW_WITH_METAL AND NOT GOOPAX_DEBUG AND N
   add_sdl_main(nbody glatter goopax_draw)
 endif()
 
+add_sdl_main(cosmology glatter goopax_draw)
+if (TARGET cosmology AND TARGET opencv)
+  target_link_libraries(cosmology opencv)
+endif()
+
 add_sdl_main(deep-zoom-mandelbrot Boost::boost goopax_draw)
 add_sdl_main(mandelbrot goopax_draw)
 add_sdl_main(fft opencv goopax_draw)
