@@ -7,12 +7,16 @@
 #include <SDL3/SDL_main.h>
 #include <chrono>
 #include <draw/window_sdl.h>
+#include <goopax_extra/param.hpp>
 #include <random>
-using std::chrono::steady_clock;
 
+using std::chrono::steady_clock;
 using namespace Eigen;
 using namespace goopax;
 using namespace std;
+
+PARAMOPT<Tsize_t> NUM_PARTICLES("num_particles", 65536); // Number of particles
+PARAMOPT<Tdouble> DT("dt", 5E-3);
 
 void init(buffer<Vector3<float>>& x, buffer<Vector3<float>>& v)
 {
@@ -56,10 +60,10 @@ void init(buffer<Vector3<float>>& x, buffer<Vector3<float>>& v)
 
 int main(int argc, char** argv)
 {
-    (void)argc;
-    (void)argv;
-    const int N = 65536;
-    const float dt = 5E-3;
+    init_params(argc, argv);
+
+    const int N = NUM_PARTICLES();
+    const float dt = DT();
     const float mass = 1.0 / N;
 
     unique_ptr<sdl_window> window = sdl_window::create("nbody",

@@ -121,10 +121,9 @@ PARAMOPT<Tuint> SNAPSHOT_MOD("snapshot_mod", 0);
 PARAMOPT<Tuint> IMAGE_MOD("image_mod", 0);
 PARAMOPT<Tfloat> SCALE("scale", 1);
 PARAMOPT<string> IC("ic", "");
-PARAMOPT<Tdouble> MASSFAC("massfac", 1);
 
-PARAMOPT<Tsize_t> NUM_PARTICLES("num_particles", 1000000); // Number of particles and time step. These defaults can be
-PARAMOPT<Tdouble> DT("dt", 0.01);
+PARAMOPT<Tsize_t> NUM_PARTICLES("num_particles", 1000000); // Number of particles
+PARAMOPT<Tdouble> DT("dt", 5E-3);
 PARAMOPT<Tdouble> MAX_DISTFAC("max_distfac", 1.2);
 constexpr unsigned int MULTIPOLE_ORDER = 4;
 
@@ -1341,8 +1340,7 @@ struct cosmos_base
                 v.fill({ 0, 0, 0 });
             }
         }
-        mass.fill(1.0 / N * MASSFAC());
-        // mass.fill(1.0);
+        mass.fill(1.0 / N);
     }
 
     cosmos_base(goopax_device device, Tsize_t N, Tdouble max_distfac)
