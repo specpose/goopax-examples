@@ -135,7 +135,7 @@ using CTDOUBLE = Tdouble;
 template<class T>
 Vector<T, 4> color(T pot)
 {
-    T pc = clamp((-pot - 0.9f) * 0.3f, 0, 3.99f);
+    T pc = log2(clamp((-pot - 0.0f) * 0.6f, 1, 15.99f));
 
     gpu_float slot = floor(pc);
     gpu_float x = pc - slot;
