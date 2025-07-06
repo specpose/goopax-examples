@@ -356,7 +356,6 @@ int main(int, char**)
     using namespace boost::multiprecision;
 
     bool quit = false;
-    bool is_fullscreen = false;
 
     map<SDL_FingerID, Vector<float, 2>> finger_positions;
 
@@ -438,17 +437,9 @@ int main(int, char**)
                     case SDLK_ESCAPE:
                         quit = true;
                         break;
-                    case SDLK_F: {
-                        if (SDL_SetWindowFullscreen(window->window, !is_fullscreen))
-                        {
-                            is_fullscreen = !is_fullscreen;
-                        }
-                        else
-                        {
-                            cerr << "Fullscreen failed: " << SDL_GetError() << endl;
-                        }
-                    }
-                    break;
+                    case SDLK_F:
+                        window->toggle_fullscreen();
+                        break;
                 };
             }
         }

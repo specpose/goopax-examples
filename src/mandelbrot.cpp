@@ -117,7 +117,6 @@ int main(int, char**)
     constexpr float timescale = 1; // [in seconds]
 
     bool quit = false;
-    bool is_fullscreen = false;
 
     auto last_draw_time = steady_clock::now();
     auto last_fps_time = last_draw_time;
@@ -197,16 +196,9 @@ int main(int, char**)
                     case SDLK_ESCAPE:
                         quit = true;
                         break;
-                    case SDLK_F: {
-                        if (SDL_SetWindowFullscreen(window->window, !is_fullscreen))
-                        {
-                            is_fullscreen = !is_fullscreen;
-                        }
-                        else
-                        {
-                            cerr << "Fullscreen failed: " << SDL_GetError() << endl;
-                        }
-                    }
+                    case SDLK_F:
+                        window->toggle_fullscreen();
+                        break;
                     case '1':
                         set_type(typeid(float));
                         break;

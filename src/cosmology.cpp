@@ -2725,7 +2725,6 @@ int main(int argc, char** argv)
     });
 
     bool quit = false;
-    bool is_fullscreen = false;
     while (!quit)
     {
         while (auto e = window->get_event())
@@ -2741,17 +2740,9 @@ int main(int argc, char** argv)
                     case SDLK_ESCAPE:
                         quit = true;
                         break;
-                    case SDLK_F: {
-                        if (SDL_SetWindowFullscreen(window->window, !is_fullscreen))
-                        {
-                            is_fullscreen = !is_fullscreen;
-                        }
-                        else
-                        {
-                            cerr << "Fullscreen failed: " << SDL_GetError() << endl;
-                        }
-                    }
-                    break;
+                    case SDLK_F:
+                        window->toggle_fullscreen();
+                        break;
                 };
             }
         }
