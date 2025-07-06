@@ -8,11 +8,16 @@
 
  */
 
+#ifdef __APPLE__
+#include <OpenCL/cl.h>
+#else
+#include <CL/opencl.h>
+#endif
 #define CL_HPP_ENABLE_EXCEPTIONS 1
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
-#include "common/cl2.hpp"
-#include <goopax_cl>
+#include "common/opencl.hpp"
+#include <goopax>
 #include <goopax_extra/output.hpp>
 #include <iostream>
 

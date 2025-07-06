@@ -66,6 +66,7 @@ if (GLATTER_INCLUDE_DIR)
 endif()
 
 add_subdirectory(common/draw)
+
 if (GOOPAX_DRAW_WITH_OPENGL OR GOOPAX_DRAW_WITH_METAL AND NOT GOOPAX_DEBUG AND NOT ANDROID)
   add_sdl_main(nbody glatter goopax_draw)
 endif()
