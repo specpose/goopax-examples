@@ -194,8 +194,8 @@ void render(SDL_Window* window, const opengl_buffer<Eigen::Vector3<float>>& x)
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //glEnable(GL_BLEND);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glEnable(GL_BLEND);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glPointSize(3.0);
     glColor4f(1.0f, 1, 1, 1.0);
 
@@ -215,7 +215,6 @@ void render(SDL_Window* window, const opengl_buffer<Eigen::Vector3<float>>& x)
     glDrawArrays(GL_POINTS, 0, x.size());
     glDisableClientState(GL_VERTEX_ARRAY);
 }
-
 
 void render(SDL_Window* window,
             const opengl_buffer<Eigen::Vector3<float>>& x,
