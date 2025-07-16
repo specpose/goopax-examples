@@ -59,7 +59,7 @@ endif()
     "-DSDL_ASSEMBLY=0"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/sdl3"
   )
-if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
+if (NOT SDL3_FOUND)
   add_dependencies(build_external_libraries build_sdl3)
 endif()
 
@@ -102,7 +102,7 @@ endif()
     CMAKE_ARGS ${MY_CMAKE_ARGS} "${MY_BOOST_ARGS}"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/boost"
   )
-if (NOT TARGET Boost::system)
+if (NOT Boost_FOUND)
   add_dependencies(build_external_libraries build_boost)
 endif()
 
@@ -115,7 +115,7 @@ endif()
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/eigen"
     #INSTALL_COMMAND ""
   )
-if (NOT TARGET Eigen3::Eigen)
+if (NOT Eigen3_FOUND)
   add_dependencies(build_external_libraries build_eigen)
 endif()
 
@@ -128,6 +128,4 @@ endif()
     INSTALL_COMMAND ""
     BUILD_COMMAND ""
   )
-if (NOT GLATTER_INCLUDE_DIR)
-  add_dependencies(build_external_libraries build_glatter)
-endif()
+add_dependencies(build_external_libraries build_glatter)
