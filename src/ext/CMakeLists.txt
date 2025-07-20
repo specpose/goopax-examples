@@ -102,7 +102,7 @@ endif()
     CMAKE_ARGS ${MY_CMAKE_ARGS} "${MY_BOOST_ARGS}"
     "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/boost"
   )
-if (NOT TARGET Boost::system)
+if (NOT TARGET Boost::boost)
   add_dependencies(build_external_libraries build_boost)
 endif()
 
