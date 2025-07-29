@@ -184,7 +184,8 @@ struct matmul
         }
         cout << "verifying... " << flush;
 
-        using ab_float_type_use = std::conditional<std::is_same_v<ab_float_type, Ttf32>, Tfloat, ab_float_type>::type;
+        using ab_float_type_use =
+            typename std::conditional<std::is_same_v<ab_float_type, Ttf32>, Tfloat, ab_float_type>::type;
 
         MatrixX<ab_float_type_use> TA;
         MatrixX<ab_float_type_use> TB;

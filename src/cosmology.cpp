@@ -41,7 +41,13 @@ template<typename S>
 concept ostream_type = std::same_as<S, std::ostream> || std::same_as<S, goopax::gpu_ostream>;
 
 template<ostream_type S, typename V>
-    requires std::ranges::input_range<V> && std::is_class<V>::value && (!is_same<V, string>::value)
+#if __cpp_lib_ranges >= 201911
+    requires std::ranges::input_range<V>
+#else
+    requires std::is_convertible<typename std::iterator_traits<typename V::iterator>::iterator_category,
+                                 std::input_iterator_tag>::value
+#endif
+             && std::is_class<V>::value && (!is_same<V, string>::value)
              && (is_same<S, ostream>::value || is_same<S, goopax::gpu_ostream>::value)
 S& operator<<(S& s, const V& v)
 {
@@ -2698,6 +2704,7 @@ int main(int argc, char** argv)
 #if WITH_METAL
     particle_renderer Renderer(dynamic_cast<sdl_window_metal&>(*window));
     buffer<Vector3<Tfloat>> x(device, NUM_PARTICLES()); // OpenGL buffer
+    buffer<Vector4<Tfloat>> color(device, NUM_PARTICLES());
 #elif WITH_OPENGL
     opengl_buffer<Vector3<Tfloat>> x(device, NUM_PARTICLES()); // OpenGL buffer
     opengl_buffer<Vector4<Tfloat>> color(device, NUM_PARTICLES());
