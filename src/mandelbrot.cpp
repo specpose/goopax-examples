@@ -91,10 +91,10 @@ make_kernel_function(const std::type_info& type)
 
                            gpu_if(norm(z) >= 4.f)
                            {
-                               gpu_float x = static_cast<gpu_float>(iter - log2(log2(norm(z)))) * 0.1f;
-                               color[0] = 0.5f + 0.5f * sin(x);
-                               color[1] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 2. / 3));
-                               color[2] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 4. / 3));
+                               gpu_float x = static_cast<gpu_float>(iter - log2(log2(norm(z)))) * 0.03f;
+                               color[0] = 0.5f + 0.5f * sinpi(x);
+                               color[1] = 0.5f + 0.5f * sinpi(x + static_cast<float>(2. / 3));
+                               color[2] = 0.5f + 0.5f * sinpi(x + static_cast<float>(4. / 3));
                            }
 
                            image.write(position, color); // Set the color according to the escape time
