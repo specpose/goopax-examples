@@ -25,7 +25,9 @@
 #include <random>
 #include <set>
 
-using namespace Eigen;
+using Eigen::Vector;
+using Eigen::Vector3;
+using Eigen::Vector4;
 using namespace goopax;
 using namespace std;
 using chrono::duration;

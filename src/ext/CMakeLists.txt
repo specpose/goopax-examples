@@ -1,7 +1,7 @@
 add_custom_target(build_external_libraries)
 include(ExternalProject)
 
-set(MY_OPENCV_ARGS "")
+set(MY_OPENCV_ARGS "-DOpenCV_STATIC=ON")
 set(MY_BOOST_ARGS "")
 if (ANDROID)
   set(MY_SDL_GIT_TAG release-3.2.8)
@@ -16,10 +16,10 @@ else ()
 endif()
 
 list(APPEND MY_CMAKE_ARGS -DBUILD_SHARED_LIBS=0)
+list(APPEND MY_CMAKE_ARGS -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD})
+list(APPEND MY_CMAKE_ARGS -DCMAKE_VERBOSE_MAKEFILE=1)
 
 if (WIN32)
-  list(APPEND MY_OPENCV_ARGS "-DOpenCV_STATIC=ON")
-  set(OpenCV_STATIC ON CACHE "BOOL" "")
 elseif (ANDROID OR IOS)
   list(APPEND MY_OPENCV_ARGS
     -DWITH_PNG=0
@@ -47,6 +47,10 @@ elseif (ANDROID OR IOS)
     set(MY_SDL_GIT_TAG 8f9a562969761ec626d298079c99341fd25b4644)
   endif()
 endif()
+
+list(APPEND MY_OPENCV_ARGS -DBUILD_opencv_gapi=0)
+list(APPEND MY_OPENCV_ARGS -DWITH_ADE=0)
+list(APPEND MY_OPENCV_ARGS -DWITH_OBSENSOR=0)
 
 
 ExternalProject_Add(
