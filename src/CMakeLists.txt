@@ -18,7 +18,7 @@ if (WIN32)
     set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
   endif()
   if (NOT CMAKE_MSVC_RUNTIME_LIBRARY)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedRelease")
   endif()
 endif()
 
@@ -35,6 +35,10 @@ find_package(OpenCL)
 find_package(Boost 1.65.0 COMPONENTS multiprecision PATHS "${CMAKE_BINARY_DIR}/ext/boost")
 find_package(SDL3 PATHS "${CMAKE_BINARY_DIR}/ext/sdl3")
 find_package(Eigen3 3.3 NO_MODULE PATHS "${CMAKE_BINARY_DIR}/ext/eigen")
+
+if (WIN32)
+  set(OpenCV_STATIC 1)
+endif()
 find_package(OpenCV PATHS "${CMAKE_BINARY_DIR}/ext/opencv" "${CMAKE_BINARY_DIR}/ext/opencv/sdk/native/jni")
 find_path(GLATTER_INCLUDE_DIR
   glatter/glatter.h

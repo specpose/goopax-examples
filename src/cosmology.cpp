@@ -105,7 +105,7 @@ using CTfloat = Tfloat;
 
 Tuint log2_exact(Tsize_t a)
 {
-    for (uint r = 0; r < 61; ++r)
+    for (unsigned int r = 0; r < 61; ++r)
     {
         if (a == (1ul << r))
         {
@@ -916,9 +916,9 @@ void check_particles(Tint line,
 template<class T>
 struct cosmos_base
 {
-    // static constexpr uint gs_use = 4096;
-    static constexpr uint ls_use = 64;
-    // static constexpr uint ng_use = gs_use / ls_use;
+    // static constexpr unsigned int gs_use = 4096;
+    static constexpr unsigned int ls_use = 64;
+    // static constexpr unsigned int ng_use = gs_use / ls_use;
 
     const Tuint sub_bits = log2_exact(ls_use) / 2;
 
@@ -1231,10 +1231,9 @@ struct cosmos_base
         {
             v.fill({ 0, 0, 0 });
             cout << "Reading from file " << filename << endl;
-            if (!WITH_OPENCV)
-            {
-                throw std::runtime_error("Need opencv to read images");
-            }
+#if !WITH_OPENCV
+            throw std::runtime_error("Need opencv to read images");
+#else
             cv::Mat image_color = cv::imread(filename);
             if (image_color.empty())
             {
@@ -1286,6 +1285,7 @@ struct cosmos_base
                 r *= 0.5f / sqrt(extent2);
                 r[1] *= -1;
             }
+#endif
         }
         else
         {
@@ -1307,16 +1307,8 @@ struct cosmos_base
                         }
                     } while (xk.squaredNorm() >= 1);
                     x[k] = xk;
-#ifdef _MSC_VER
-                    for (Tuint i = 0; i < 3; ++i)
-                    {
-                        vk[i] += vector<Tdouble>({ -xk[1], xk[0], 0 })[i] / vector<Tdouble>({ -xk[1], xk[0], 0 }).norm()
-                                 * 0.4 * min(xk.norm() * 10, 1.f);
-                    }
-#else
                     vk += Vector<T, 3>({ -xk[1], xk[0], 0 }) / (Vector<T, 3>({ -xk[1], xk[0], 0 })).norm() * 0.4f
                           * min(xk.norm() * 10, (T)1);
-#endif
                     if (k < N / 2)
                         vk = -vk;
                     v[k] = vk;
