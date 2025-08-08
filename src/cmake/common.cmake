@@ -35,7 +35,18 @@ function(set_apple_properties P)
   SET_XCODE_PROPERTY2(${P} PRODUCT_NAME "${bundle_id_name}")
   set_property(TARGET ${P} PROPERTY XCODE_EMBED_FRAMEWORKS "${goopax_DIR}/../../../../goopax.framework")
 
-  set_target_properties(${P} PROPERTIES XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks")
+  if(IOS)
+    # For iOS, frameworks are in the root of the .app bundle
+    set_target_properties(${P} PROPERTIES
+      XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path"
+    )
+  else()
+    # For macOS, frameworks are in Contents/Frameworks
+    set_target_properties(${P} PROPERTIES
+      XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/../Frameworks"
+    )
+  endif()
+
   add_dependencies(${P} goopax::goopax)
 endfunction()
 
