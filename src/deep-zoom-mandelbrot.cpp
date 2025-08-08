@@ -295,7 +295,7 @@ public:
                                       gpu_uint s2u = reinterpret<Tuint>(1.f);
                                       s2u -= shift << 23;
                                       auto scale2 = reinterpret<gpu_float>(s2u);
-                                      gpu_float scalefac = cond(shift >= 127u, 0, (gpu_float)scale2);
+                                      gpu_float scalefac = cond(shift >= 127u, 0.f, (gpu_float)scale2);
 
                                       z = zc[iter] + dz * scalefac;
                                       maxz = max(maxz, (gpu_float)norm(zc[iter] + dz * scalefac));
