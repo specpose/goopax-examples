@@ -1810,7 +1810,7 @@ struct cosmos : public cosmos_base<T>
                                     gpu_uint pos = offset + treebegin + local_id() * treecount_blocksize + k;
                                     gpu_if(pos < treeend || (k < treecount_blocksize - 1))
                                     {
-                                        tree[pos].first_child = cond(has_children_vec[k], treeend + toffset, 0);
+                                        tree[pos].first_child = cond(has_children_vec[k], treeend + toffset, 0u);
                                         toffset += 2 * (gpu_uint)has_children_vec[k];
                                     }
                                 }
@@ -1837,7 +1837,7 @@ struct cosmos : public cosmos_base<T>
                         tree[treeoffset + k].first_child =
                             cond((tree[treeoffset + k].first_child != 0),
                                  tree[treeoffset + k].first_child + offsetsum + blocksums[k / treecount_blocksize],
-                                 0);
+                                 0u);
                         const treenode<gpu_T, max_multipole> n = tree[treeoffset + k];
                         gpu_if(n.first_child != 0)
                         {
@@ -2402,7 +2402,7 @@ struct cosmos : public cosmos_base<T>
                                                                        * pow2(pow<-1, 2>(dist.squaredNorm() + 1E-20f)));
                                                             P[k] += cond(
                                                                 b == a + k,
-                                                                0,
+                                                                0.f,
                                                                 -(mass[b] * pow<-1, 2>(dist.squaredNorm() + 1E-20f)));
                                                         }
                                                     });
@@ -2479,7 +2479,7 @@ struct cosmos : public cosmos_base<T>
                         {
                             COORDS.move_up();
                             --depth_bm;
-                            child_mod3 = cond(child_mod3 == 0, 2, child_mod3 - 1);
+                            child_mod3 = cond(child_mod3 == 0, 2u, child_mod3 - 1);
                             bignodeshift_and = cond(child_mod3 == (this->sub_bits + MAX_BIGNODE_BITS() + 1) % 3,
                                                     (bignodeshift_and >> 1)
                                                         | (bignodeshift_and_t(0x80000000)
@@ -2522,7 +2522,7 @@ struct cosmos : public cosmos_base<T>
                         bignodeshift_and = cond(child_mod3 == (this->sub_bits + MAX_BIGNODE_BITS() + 1) % 3,
                                                 bignodeshift_and << 1,
                                                 bignodeshift_and);
-                        child_mod3 = cond(child_mod3 == 2, 0, child_mod3 + 1);
+                        child_mod3 = cond(child_mod3 == 2, 0u, child_mod3 + 1);
                         id_bignode <<= 1;
 
                         gpu_assert(depth_bm < tree_depthbits);
