@@ -161,6 +161,7 @@ endif()
 
 add_sdl_main(deep-zoom-mandelbrot Boost::boost goopax_draw)
 add_sdl_main(mandelbrot goopax_draw)
+add_sdl_main(mandelbrot-unspecified goopax_draw)
 add_sdl_main(fft opencv goopax_draw)
 add(gather goopax_typedefs)
 add(svm-pingpong goopax_typedefs)
