@@ -4,7 +4,7 @@ include(ExternalProject)
 set(MY_OPENCV_ARGS "-DOpenCV_STATIC=ON")
 set(MY_BOOST_ARGS "")
 if (ANDROID)
-  set(MY_SDL_GIT_TAG release-3.2.8)
+  set(MY_SDL_GIT_TAG release-3.2.18)
   set(MY_SDL_ARGS
     "-DSDL_SHARED=1"
     "-DSDL_STATIC=0")
@@ -29,9 +29,15 @@ elseif (ANDROID OR IOS)
     -DWITH_JASPER=0
     -DBUILD_JASPER=0)
   if (ANDROID)
+    list(APPEND MY_CMAKE_ARGS
+      -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+      -DCMAKE_ANDROID_STL_TYPE=${CMAKE_ANDROID_STL_TYPE}
+      -DCMAKE_SYSTEM_VERSION=${CMAKE_SYSTEM_VERSION}
+      -DCMAKE_ANDROID_ARCH_ABI=${CMAKE_ANDROID_ARCH_ABI}
+      -DCMAKE_ANDROID_NDK=${CMAKE_ANDROID_NDK})
     list(APPEND MY_BOOST_ARGS "-DBOOST_EXCLUDE_LIBRARIES=process")
     list(APPEND MY_OPENCV_ARGS
-      -DANDROID_STL=c++_static
+      -DANDROID_STL=${CMAKE_ANDROID_STL_TYPE}
       -DBUILD_JAVA=0
       -DBUILD_ANDROID_EXAMPLES=0
       -DBUILD_ANDROID_PROJECTS=0
@@ -64,7 +70,7 @@ ExternalProject_Add(
   "-DSDL_ASSEMBLY=0"
   "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/sdl3"
 )
-if (NOT TARGET SDL3::SDL3 AND NOT ANDROID)
+if (NOT TARGET SDL3::SDL3)
   add_dependencies(build_external_libraries build_sdl3)
 endif()
 
@@ -107,7 +113,7 @@ ExternalProject_Add(
   CMAKE_ARGS ${MY_CMAKE_ARGS} "${MY_BOOST_ARGS}"
   "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/boost"
 )
-if (NOT TARGET Boost::boost)
+if (NOT TARGET Boost::boost AND NOT ANDROID)
   add_dependencies(build_external_libraries build_boost)
 endif()
 
