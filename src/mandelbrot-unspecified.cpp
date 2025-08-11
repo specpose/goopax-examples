@@ -1,6 +1,6 @@
 /**
-   \example mandelbrot.cpp
-   Mandelbrot example
+   \example mandelbrot-unspecified.cpp
+   Mandelbrot example program with the ability to change precision.
 
    Use mouse click/wheel or finger gestures to navigate
 
@@ -8,8 +8,8 @@
    - escape: quit
    - 1: set type to float (default)
    - 2: set type to double
-   - 3: set type to std::float16_t
-   - 4: set type to std::bfloat16_t
+   - 3: set type to std::float16_t (if supported)
+   - 4: set type to std::bfloat16_t (if supported)
  */
 
 #include <SDL3/SDL_main.h>
@@ -91,7 +91,8 @@ make_kernel_function(const std::type_info& type)
 
                            gpu_if(norm(z) >= 4.f)
                            {
-                               gpu_float x = static_cast<gpu_float>(iter - log2(log2(norm(z)))) * 0.03f;
+                               gpu_float x =
+                                   static_cast<gpu_float>(iter - log2(log2(static_cast<gpu_float>(norm(z))))) * 0.03f;
                                color[0] = 0.5f + 0.5f * sinpi(x);
                                color[1] = 0.5f + 0.5f * sinpi(x + static_cast<float>(2. / 3));
                                color[2] = 0.5f + 0.5f * sinpi(x + static_cast<float>(4. / 3));

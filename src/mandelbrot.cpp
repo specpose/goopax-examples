@@ -1,6 +1,11 @@
 /**
    \example mandelbrot.cpp
    Mandelbrot example
+
+   Use mouse click/wheel or finger gestures to navigate
+
+   Keys:
+   - escape: quit
  */
 
 #include <SDL3/SDL_main.h>
@@ -68,9 +73,9 @@ int main(int, char**)
                                          gpu_if(norm(z) >= 4.f)
                                          {
                                              gpu_float x = (iter - log2(log2(norm(z)))) * 0.03f;
-                               color[0] = 0.5f + 0.5f * sinpi(x);
-                               color[1] = 0.5f + 0.5f * sinpi(x + static_cast<float>(2. / 3));
-                               color[2] = 0.5f + 0.5f * sinpi(x + static_cast<float>(4. / 3));
+                                             color[0] = 0.5f + 0.5f * sinpi(x);
+                                             color[1] = 0.5f + 0.5f * sinpi(x + static_cast<float>(2. / 3));
+                                             color[2] = 0.5f + 0.5f * sinpi(x + static_cast<float>(4. / 3));
                                          }
 
                                          image.write(position, color); // Set the color according to the escape time
@@ -155,7 +160,7 @@ int main(int, char**)
                     case SDLK_F:
                         window->toggle_fullscreen();
                         break;
-                    break;
+                        break;
                 };
             }
         }
