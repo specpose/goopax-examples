@@ -1,15 +1,6 @@
 /**
    \example mandelbrot.cpp
    Mandelbrot example
-
-   Use mouse click/wheel or finger gestures to navigate
-
-   Keys:
-   - escape: quit
-   - 1: set type to float (default)
-   - 2: set type to double
-   - 3: set type to std::float16_t
-   - 4: set type to std::bfloat16_t
  */
 
 #include <SDL3/SDL_main.h>
@@ -24,12 +15,13 @@ using goopax::interface::PI;
 using std::chrono::steady_clock;
 
 template<class D, typename window_size_t = unsigned int>
-complex<D> calc_c(complex<D> center, D scale, D x, D y, window_size_t window_size)
+complex<D> calc_c(complex<D> center, D scale, Vector<D, 2> position, window_size_t window_size)
 {
     // Calculate the value c for a given image point.
     // This function is called both from within the kernel and from the main function
     return center
-           + static_cast<D>(scale / window_size[0]) * complex<D>(x - window_size[0] * 0.5f, y - window_size[1] * 0.5f);
+           + static_cast<D>(scale / window_size[0])
+                 * complex<D>(position[0] - window_size[0] * 0.5f, position[1] - window_size[1] * 0.5f);
 }
 
 static const array<complex<double>, 2> max_allowed_range = { { { -2, -2 }, { 2, 2 } } };
@@ -39,74 +31,51 @@ static complex<double> clamp_range(const complex<double>& x)
              std::clamp(x.imag(), max_allowed_range[0].imag(), max_allowed_range[1].imag()) };
 }
 
-complex<gpu_type<>> cast(const complex<gpu_type<>>& value, const std::type_info& type)
-{
-    return complex<gpu_type<>>(value.real().cast(type), value.imag().cast(type));
-}
-
-// This function returns a function that is used to create the kernel that creates the Mandelbrot image.
-// It supports multiple types, specified by the parameter `type`.
-// We could make this a template function. Instead, we are using it to demonstrate
-// the use of generic goopax types (gpu_type<>), which allows the type to be specified at runtime.
-std::function<
-    void(image_resource<2, Vector<Tuint8_t, 4>, true>& image, const complex<gpu_double> center, const gpu_float scale)>
-make_kernel_function(const std::type_info& type)
-{
-    return [&type](image_resource<2, Vector<Tuint8_t, 4>, true>& image,
-                   const complex<gpu_double> center,
-                   const gpu_float scale) {
-        gpu_for_global(0,
-                       image.width() * image.height(),
-                       [&](gpu_uint k) // Parallel loop over all image points
-                       {
-                           Vector<gpu_uint, 2> position = { k % image.width(), k / image.width() };
-
-                           complex<gpu_type<>> c = calc_c<gpu_type<>>(
-                               cast(center, type), scale, position[0], position[1], image.dimensions());
-                           complex<gpu_type<>> z(gpu_type<>(0.f).cast(type), gpu_type<>(0.f).cast(type));
-
-                           static constexpr unsigned int max_iter = 4096;
-                           gpu_uint iter = 0;
-
-                           // As soon as norm(z) >= 4, z is destined to diverge to inf. Delaying
-                           // until 10.f to make colors a bit smoother.
-                           gpu_while(iter < max_iter && norm(z) < 10.f)
-                           {
-                               int Ninner = 4;
-#if defined(__STDCPP_FLOAT16_T__)
-                               if (type == typeid(std::float16_t))
-                               {
-                                   Ninner = 2;
-                               }
-#endif
-
-                               for (int k = 0; k < Ninner; ++k) // Inner loop to speed up things.
-                               {
-                                   z = z * z + c; // The core formula of the mandelbrot set
-                                   ++iter;
-                               }
-                           }
-
-                           Vector<gpu_float, 4> color = { 0, 0, 0.4, 1 };
-
-                           gpu_if(norm(z) >= 4.f)
-                           {
-                               gpu_float x = static_cast<gpu_float>(iter - log2(log2(norm(z)))) * 0.03f;
-                               color[0] = 0.5f + 0.5f * sinpi(x);
-                               color[1] = 0.5f + 0.5f * sinpi(x + static_cast<float>(2. / 3));
-                               color[2] = 0.5f + 0.5f * sinpi(x + static_cast<float>(4. / 3));
-                           }
-
-                           image.write(position, color); // Set the color according to the escape time
-                       });
-    };
-}
-
 int main(int, char**)
 {
     auto window = sdl_window::create("mandelbrot", { 640, 480 }, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
-    kernel render(window->device, make_kernel_function(typeid(float)));
+    kernel render(window->device,
+                  [](image_resource<2, Vector<Tuint8_t, 4>, true>& image,
+                     const complex<gpu_float> center,
+                     const gpu_float scale) {
+                      gpu_for_global(0,
+                                     image.width() * image.height(),
+                                     [&](gpu_uint k) // Parallel loop over all image points
+                                     {
+                                         Vector<gpu_uint, 2> position = { k % image.width(), k / image.width() };
+
+                                         complex<gpu_float> c = calc_c(
+                                             center, scale, position.cast<gpu_float>().eval(), image.dimensions());
+                                         complex<gpu_float> z(0, 0);
+
+                                         static constexpr unsigned int max_iter = 4096;
+                                         gpu_uint iter = 0;
+
+                                         // As soon as norm(z) >= 4, z is destined to diverge to inf. Delaying
+                                         // until 10.f to make colors a bit smoother.
+                                         gpu_while(iter < max_iter && norm(z) < 10.f)
+                                         {
+                                             for (int k = 0; k < 4; ++k) // Inner loop to speed up things.
+                                             {
+                                                 z = z * z + c; // The core formula of the mandelbrot set
+                                                 ++iter;
+                                             }
+                                         }
+
+                                         Vector<gpu_float, 4> color = { 0, 0, 0.4, 1 };
+
+                                         gpu_if(norm(z) >= 4.f)
+                                         {
+                                             gpu_float x = (iter - log2(log2(norm(z)))) * 0.03f;
+                               color[0] = 0.5f + 0.5f * sinpi(x);
+                               color[1] = 0.5f + 0.5f * sinpi(x + static_cast<float>(2. / 3));
+                               color[2] = 0.5f + 0.5f * sinpi(x + static_cast<float>(4. / 3));
+                                         }
+
+                                         image.write(position, color); // Set the color according to the escape time
+                                     });
+                  });
 
     complex<double> moveto = { -0.796570904132624102, 0.183652206054726097 };
 
@@ -166,11 +135,10 @@ int main(int, char**)
                 float x = 0, y = 0;
                 SDL_GetMouseState(&x, &y);
 
-                moveto = calc_c<double>(center,
-                                        scale, // Set new center
-                                        x,
-                                        y,
-                                        window_size);
+                moveto = calc_c(center,
+                                scale, // Set new center
+                                { x, y },
+                                window_size);
                 moveto = clamp_range(moveto);
             }
             else if (e->type == SDL_EVENT_MOUSE_WHEEL)
@@ -179,18 +147,6 @@ int main(int, char**)
             }
             else if (e->type == SDL_EVENT_KEY_DOWN)
             {
-                auto set_type = [&](const std::type_info& type) {
-                    if (!window->device.support_type(type))
-                    {
-                        cout << "Type " << pretty_typename(type) << " not supported on this device." << endl;
-                    }
-                    else
-                    {
-                        cout << "Setting type to " << pretty_typename(type) << endl;
-                        render.assign(window->device, make_kernel_function(type));
-                    }
-                };
-
                 switch (e->key.key)
                 {
                     case SDLK_ESCAPE:
@@ -199,22 +155,7 @@ int main(int, char**)
                     case SDLK_F:
                         window->toggle_fullscreen();
                         break;
-                    case '1':
-                        set_type(typeid(float));
-                        break;
-                    case '2':
-                        set_type(typeid(double));
-                        break;
-#if defined(__STDCPP_FLOAT16_T__)
-                    case '3':
-                        set_type(typeid(std::float16_t));
-                        break;
-#endif
-#if defined(__STDCPP_BFLOAT16_T__)
-                    case '4':
-                        set_type(typeid(std::bfloat16_t));
-                        break;
-#endif
+                    break;
                 };
             }
         }
@@ -240,13 +181,11 @@ int main(int, char**)
                 // dragging with one or multiple fingers
 
                 const complex<double> shift =
-                    calc_c<double>(
-                        center, scale, finger_cm[0] * window_size[0], finger_cm[1] * window_size[1], window_size)
-                    - calc_c<double>(center,
-                                     scale,
-                                     last_finger_cm[0] * window_size[0],
-                                     last_finger_cm[1] * window_size[1],
-                                     window_size);
+                    calc_c(center, scale, { finger_cm[0] * window_size[0], finger_cm[1] * window_size[1] }, window_size)
+                    - calc_c(center,
+                             scale,
+                             { last_finger_cm[0] * window_size[0], last_finger_cm[1] * window_size[1] },
+                             window_size);
 
                 center -= shift;
                 moveto -= shift;
@@ -266,7 +205,7 @@ int main(int, char**)
         std::array<unsigned int, 2> render_size;
 
         window->draw_goopax([&](image_buffer<2, Vector<Tuint8_t, 4>, true>& image) {
-            render(image, center, scale);
+            render(image, static_cast<complex<float>>(center), scale);
             render_size = image.dimensions();
         });
 
