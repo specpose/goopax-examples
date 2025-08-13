@@ -104,19 +104,18 @@ struct matmul
             }
         }
 
-        kernel_simple.assign(device, [this]() {
-            const_resource A(this->A);
-            const_resource B(this->B);
-            resource C(this->C);
-
-            gpu_for_group(0, Nk, [&](gpu_uint k) {
-                gpu_for_local(0, Nm, [&](gpu_uint m) {
-                    gpu_c_float_type sum = static_cast<c_float_type>(0);
-                    gpu_for(0, Nl, [&](gpu_uint l) { sum += A[get_index_a(k, l)] * B[get_index_b(l, m)]; });
-                    C[get_index_c(k, m)] = sum;
+        if constexpr (!std::is_same_v<ab_float_type, Ttf32>)
+        {
+            kernel_simple.assign(device, [this]() {
+                gpu_for_group(0, Nk, [&](gpu_uint k) {
+                    gpu_for_local(0, Nm, [&](gpu_uint m) {
+                        gpu_c_float_type sum = static_cast<c_float_type>(0);
+                        gpu_for(0, Nl, [&](gpu_uint l) { sum += A[get_index_a(k, l)] * B[get_index_b(l, m)]; });
+                        C[get_index_c(k, m)] = sum;
+                    });
                 });
             });
-        });
+        }
 
         // Choosing suitable matrix block sizes.
         // Larger values can improve performance, but only if there are
@@ -128,10 +127,6 @@ struct matmul
         if (device.support_warp_matrix<ab_float_type, c_float_type>(bk, bm, bl))
         {
             kernel_tensor.assign(device, [this, bk, bl, bm]() {
-                const_resource A(this->A);
-                const_resource B(this->B);
-                resource C(this->C);
-
                 assert(Nk % bk == 0);
                 assert(Nl % bl == 0);
                 assert(Nm % bm == 0);
@@ -181,29 +176,35 @@ struct matmul
         }
         cout << "verifying... " << flush;
 
-        MatrixX<ab_float_type> TA;
-        MatrixX<ab_float_type> TB;
+        using ab_float_type_use =
+            typename std::conditional<std::is_same_v<ab_float_type, Ttf32>, Tfloat, ab_float_type>::type;
+
+        MatrixX<ab_float_type_use> TA;
+        MatrixX<ab_float_type_use> TB;
         MatrixX<c_float_type> TC;
+
         {
             buffer_map A(this->A);
             buffer_map B(this->B);
             buffer_map C(this->C);
+            auto* Af = reinterpret_cast<ab_float_type_use*>(A.data());
+            auto* Bf = reinterpret_cast<ab_float_type_use*>(B.data());
 
             if (COL_MAJOR_A())
             {
-                TA = Map<Matrix<ab_float_type, Dynamic, Dynamic, ColMajor>>(A.data(), Nk, Nl);
+                TA = Map<Matrix<ab_float_type_use, Dynamic, Dynamic, ColMajor>>(Af, Nk, Nl);
             }
             else
             {
-                TA = Map<Matrix<ab_float_type, Dynamic, Dynamic, RowMajor>>(A.data(), Nk, Nl);
+                TA = Map<Matrix<ab_float_type_use, Dynamic, Dynamic, RowMajor>>(Af, Nk, Nl);
             }
             if (COL_MAJOR_B())
             {
-                TB = Map<Matrix<ab_float_type, Dynamic, Dynamic, ColMajor>>(B.data(), Nl, Nm);
+                TB = Map<Matrix<ab_float_type_use, Dynamic, Dynamic, ColMajor>>(Bf, Nl, Nm);
             }
             else
             {
-                TB = Map<Matrix<ab_float_type, Dynamic, Dynamic, RowMajor>>(B.data(), Nl, Nm);
+                TB = Map<Matrix<ab_float_type_use, Dynamic, Dynamic, RowMajor>>(Bf, Nl, Nm);
             }
             if (COL_MAJOR_C())
             {
@@ -241,7 +242,14 @@ void run_with_types(goopax_device device)
     }
 
     cout << "\nSimple kernel:" << endl;
-    mat.run(mat.kernel_simple);
+    if (mat.kernel_simple.get_impl() != nullptr)
+    {
+        mat.run(mat.kernel_simple);
+    }
+    else
+    {
+        cout << "Not supported on this device" << endl;
+    }
 }
 
 int main(int argc, char** argv)
@@ -253,6 +261,10 @@ int main(int argc, char** argv)
         cout << "running on device " << device.name() << ", env=" << device.get_envmode() << endl;
         cout << "matrix sizes: matrix<T_AB, " << NK() << ", " << NL() << "> * matrix<T_AB, " << NL() << ", " << NM()
              << "> + matrix<T_C, " << NK() << ", " << NM() << ">" << endl;
+        if (device.support_type(Ttf32()))
+        {
+            run_with_types<Ttf32, Tfloat>(device);
+        }
         if (device.support_type(Tdouble()))
         {
             run_with_types<Tdouble, Tdouble>(device);

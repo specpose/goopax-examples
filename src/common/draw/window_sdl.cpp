@@ -80,6 +80,18 @@ void sdl_window::set_title(const std::string& title) const
     SDL_SetWindowTitle(window, title.c_str());
 }
 
+void sdl_window::toggle_fullscreen()
+{
+    if (SDL_SetWindowFullscreen(window, !is_fullscreen))
+    {
+        is_fullscreen = !is_fullscreen;
+    }
+    else
+    {
+        cerr << "Fullscreen failed: " << SDL_GetError() << endl;
+    }
+}
+
 std::unique_ptr<sdl_window>
 sdl_window::create(const char* name, Eigen::Vector<Tuint, 2> size, uint32_t flags, goopax::envmode env)
 {
