@@ -38,7 +38,7 @@ function(set_apple_properties P)
   if(IOS)
     # For iOS, frameworks are in the root of the .app bundle
     set_target_properties(${P} PROPERTIES
-      XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path"
+      XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
     )
   else()
     # For macOS, frameworks are in Contents/Frameworks
