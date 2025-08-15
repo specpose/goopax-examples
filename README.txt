@@ -50,6 +50,6 @@ Set the ANDROID_NDK_ROOT environment variable to the location of the Android NDK
 
 Then run something like this:
 
-    ./build-all.sh -DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=25 -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a -DCMAKE_POSITION_INDEPENDENT_CODE=1
+    ./build-all.sh -G Ninja -DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=25 -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a -DCMAKE_POSITION_INDEPENDENT_CODE=1
 
-For the graphical example programs, shared libraries are created. They need to be further incorporated into an android app.
+For the graphical SDL-based example programs, shared libraries are created. They need to be further incorporated into an android app. For a simple test, (https://github.com/specpose/goopax-template-android) may be sufficient.
