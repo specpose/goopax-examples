@@ -18,7 +18,7 @@ if (WIN32)
     set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
   endif()
   if (NOT CMAKE_MSVC_RUNTIME_LIBRARY)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedRelease")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
   endif()
 endif()
 
