@@ -29,17 +29,18 @@ endif()
 find_package(goopax REQUIRED PATHS ../..)
 find_package(TBB)
 find_package(OpenCL)
-find_package(Boost 1.65.0 COMPONENTS multiprecision PATHS "${CMAKE_BINARY_DIR}/ext/boost")
-find_package(SDL3 PATHS "${CMAKE_BINARY_DIR}/ext/sdl3")
-find_package(Eigen3 3.3 NO_MODULE PATHS "${CMAKE_BINARY_DIR}/ext/eigen")
+find_package(Boost 1.65.0 COMPONENTS multiprecision PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/boost")
+find_package(SDL3 PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/sdl3")
+find_package(Eigen3 3.3 NO_MODULE PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/eigen")
 
 if (WIN32)
   set(OpenCV_STATIC 1)
 endif()
-find_package(OpenCV PATHS "${CMAKE_BINARY_DIR}/ext/opencv" "${CMAKE_BINARY_DIR}/ext/opencv/sdk/native/jni")
+find_package(OpenCV PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/opencv" "${CMAKE_CURRENT_BINARY_DIR}/ext/opencv/sdk/native/jni")
+
 find_path(GLATTER_INCLUDE_DIR
   glatter/glatter.h
-  PATHS "${CMAKE_BINARY_DIR}/ext/build_glatter-prefix/src/build_glatter/include"
+  PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/build_glatter-prefix/src/build_glatter/include"
 )
 
 add_subdirectory(ext)
