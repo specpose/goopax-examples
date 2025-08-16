@@ -1,9 +1,19 @@
 /**
    \example cosmology.cpp
    FMM N-body example program
+
+   It is a rather complex algorithm, roughly based on
+   "A short course on fast multiple methods", https://math.nyu.edu/~greengar/shortcourse_fmm.pdf,
+   but with some modifications:
+   - Multipoles are represented in Cartesian coordinates instead of the usual spherical harmonics.
+   - A binary tree is used instead of an octree.
+
+   The parameters are optimise for big GPUs with many registers.
+   If you want to run it on smaller GPUs with <256 registers,
+   you might want to reduce MULTIPOLE_ORDER to 2 or so. The precision will be worse,
+   but at least it will run with usable performance.
  */
 
-#define PRECISION_TEST 0
 #define WITH_TIMINGS 0
 
 #if __has_include(<opencv2/opencv.hpp>)
@@ -73,22 +83,6 @@ ostream& operator<<(ostream& s, const pair<A, B>& p)
 {
     return s << "[" << p.first << "," << p.second << "]";
 }
-
-/*
-  template<typename T>
-ostream& operator<<(ostream& s, vector<T> a)
-{
-  s << "(";
-  for (uint k = 0; k < a.size(); ++k)
-  {
-      if (k != 0)
-          s << ", ";
-      s << a[k];
-  }
-  s << ")";
-  return s;
-}
-*/
 }
 
 using signature_t = Tuint64_t;
@@ -125,14 +119,14 @@ PARAMOPT<Tuint> MAX_DEPTH("max_depth", 64);
 PARAMOPT<Tbool> POW2_SIZEVEC("pow2_sizevec", true);
 #define CALC_POTENTIAL 1
 
-PARAMOPT<Tuint> SNAPSHOT_MOD("snapshot_mod", 0);
-PARAMOPT<Tuint> IMAGE_MOD("image_mod", 0);
-PARAMOPT<Tfloat> SCALE("scale", 1);
 PARAMOPT<string> IC("ic", "");
 
 PARAMOPT<Tsize_t> NUM_PARTICLES("num_particles", 1000000); // Number of particles
 PARAMOPT<Tdouble> DT("dt", 5E-3);
 PARAMOPT<Tdouble> MAX_DISTFAC("max_distfac", 1.2);
+
+PARAMOPT<bool> PRECISION_TEST("precision_test", false);
+
 constexpr unsigned int MULTIPOLE_ORDER = 4;
 
 using GPU_DOUBLE = gpu_double;
@@ -155,8 +149,6 @@ Vector<T, 4> color(T pot)
                   Vector<gpu_float, 4>({ x, 1 - x, 0, 0 }),
                   cond(slot == 2, Vector<gpu_float, 4>({ 1, x, 0, 0 }), Vector<gpu_float, 4>({ 1, 1, x, 0 }))));
     return ret;
-
-    // return {max(1.0 - pc*2, 0), 1-abs(2*pc-1), max((pc-0.5)*2, 0), 0};
 }
 
 template<unsigned int N>
@@ -857,62 +849,6 @@ gpu_uint find_particle_split(const resource<pair<signature_t, CTuint>>& particle
     return split;
 }
 
-/*
-template<class gpu_T, typename CENTER, typename X_TYPE, typename PLIST>
-void check_particles(Tint line,
-                     gpu_uint pbegin,
-                     gpu_uint pend,
-                     CENTER center_r,
-                     gpu_uint depth,
-                     const X_TYPE& x,
-#if TEST_ID
-                     gpu_uint ID,
-                     gpu_bool ID_init,
-#endif
-                     const PLIST& plist,
-                     gpu_uint group_begin,
-                     gpu_uint group_end,
-                     gpu_uint num_particles)
-{
-    (void)line;
-    (void)plist;
-#if DO_DUMP
-    gpu_ostream DUMP(cout);
-#endif
-    gpu_for(pbegin, pend, [&](gpu_uint p) {
-        Vector<gpu_T, 3> tol;
-        for (Tuint k = 0; k < 3; ++k)
-        {
-            tol[k] = halflen * 1.01f * pow(2.0f, (2 - k) / 3.0f) * pow((gpu_T)0.5, gpu_T((depth + 2 - k) / 3));
-        }
-
-        for (Tuint mod3 = 0; mod3 < 3; ++mod3)
-        {
-            if (mod3 == 1)
-                gpu_if((depth - sub_bits + 1) % 3 == mod3)
-                {
-                    for (Tuint k = 0; k < 3; ++k)
-                    {
-                        gpu_bool ok = (abs(x[p][k] - rot(center_r, mod3)[k]) < tol[k]);
-                        gpu_assert(ok);
-                    }
-                }
-        }
-#if TEST_ID
-        gpu_if(ID_init)
-        {
-            gpu_bool ok = ID == (plist[p].first >> (MAX_DEPTH() - depth));
-            gpu_assert(ok);
-        }
-#endif
-    });
-
-    (void)group_begin;
-    (void)group_end;
-    (void)num_particles;
-}
-*/
-
 template<class T>
 struct cosmos_base
 {
@@ -990,10 +926,6 @@ struct cosmos_base
             Tint bits = MAX_BIGNODE_BITS();
             Vector<Tint, 3> bitvec = { (bits + 2) / 3, (bits + 0) / 3, (bits + 1) / 3 };
 
-            //      string sd = goopaxlib::impl::tostr(max_distfac);
-            //      ofstream PLOT_CHILD("plot_child-" + sd);
-            //      ofstream PLOT_PARENT("plot_parent-" + sd);
-            //      ofstream PLOT_UPDATE("plot_update-" + sd);
             Vector<Tint, 3> ac;
             for (ac[2] = -max_distfac * pow<1, 3>(2.0) * 4 - 5; ac[2] <= max_distfac * pow<1, 3>(2.0) * 4 + 5; ++ac[2])
                 for (ac[1] = -max_distfac * pow<1, 3>(2.0) * 4 - 5; ac[1] <= max_distfac * pow<1, 3>(2.0) * 4 + 5;
@@ -1025,26 +957,14 @@ struct cosmos_base
 
                         Tbool uc = (mincc.squaredNorm() < pow2(max_distfac * pow<-1, 3>(2.0)));
                         Tbool up2 = (mincp2.squaredNorm() < pow2(max_distfac * pow<-1, 3>(2.0)));
-                        // cout << "ac=" << ac << ", ap=" << ap << ", ap2=" << ap2 << ", cp=" << cp << ", mincp=" <<
-                        // mincp << ", cc=" << cc << ", mincc=" << mincc << ", up=" << up << ", uc=" << uc << endl;
-                        // assert(up == up2);
                         if (uc)
                         {
                             local_vec.push_back(ac);
-                            //		  PLOT_CHILD << ac[0] << " " << ac[1] << " " << ac[2] << endl;
-                            // cout << "ac=" << ac << ", ap=" << ap << ", ap2=" << ap2 << ", cp2=" << cp2 << ", cc=" <<
-                            // cc << ", mincc=" << mincc << ", uc=" << uc << ", up2=" << up2 << ", halfboxc=" <<
-                            // halfboxc << endl;
                         }
                         if (up2 && !uc)
                         {
                             update_vec.push_back(ac);
-                            //		  PLOT_UPDATE << ac[0] << " " << ac[1] << " " << ac[2] << endl;
                         }
-                        //	      if (up2)
-                        //		{
-                        //		  PLOT_PARENT << ac[0] << " " << ac[1] << " " << ac[2] << endl;
-                        //		}
                         if (uc && !up2)
                         {
                             abort();
@@ -1118,15 +1038,6 @@ struct cosmos_base
                         }
             }
 
-            //      {
-            //	ofstream ACCESS("plot_access_1-" + sd);
-            //	for (Tuint n : access_set)
-            //	  {
-            //	    Vector<Tuint, 3> pos = {n%sizevec[0], (n/sizevec[0])%sizevec[1], n/sizevec[0]/sizevec[1]};
-            //	    ACCESS << pos[0] << " " << pos[1] << " " << pos[2] << endl;
-            //	  }
-            //      }
-
             auto maxvec_new = maxvec;
             set<Tuint> old_access_set;
             while (old_access_set.size() != access_set.size())
@@ -1162,17 +1073,6 @@ struct cosmos_base
                     }
                 }
             }
-            //      {
-            //	ofstream ACCESS("plot_access_2-" + sd);
-            //	ofstream ACCESS_U("plot_access_U-" + sd);
-            //	for (Tuint n : access_set)
-            //	  {
-            //	    Vector<Tuint, 3> pos = {n%sizevec[0], (n/sizevec[0])%sizevec[1], n/sizevec[0]/sizevec[1]};
-            //	    ACCESS << pos[0] << " " << pos[1] << " " << pos[2] << endl;
-            //	    if (access_set_U.find(n) != access_set_U.end())
-            //	      ACCESS_U << pos[0] << " " << pos[1] << " " << pos[2] << endl;
-            //	  }
-            //      }
             cout1 << "maxvec=" << maxvec << endl << "maxvec_new=" << maxvec_new << endl;
             if (maxvec != maxvec_new)
             {
@@ -1208,8 +1108,6 @@ struct cosmos_base
 
     void step()
     {
-        // goopax_device* device = x.get_device();
-
         cout1 << "Moving." << endl;
         movefunc(x, v, x.size(), 0.5 * DT());
         cout1 << "Calculating force." << endl;
@@ -1341,6 +1239,80 @@ struct cosmos_base
             }
         }
         mass.fill(1.0 / N);
+    }
+
+    void precision_test()
+    {
+        cout << "Doing precision test" << endl;
+        goopax_device device = x.get_device();
+
+        kernel verify(device,
+                      [](const resource<Vector<T, 3>>& x,
+                         const resource<T>& mass,
+                         const resource<Vector<T, 3>>& force,
+#if CALC_POTENTIAL
+                         gather_add<TDOUBLE>& poterr,
+                         const resource<T>& potential,
+#endif
+                         gpu_uint pnum,
+                         gpu_uint np) -> gather_add<double> {
+                          GPU_DOUBLE ret = 0;
+#if CALC_POTENTIAL
+                          poterr = 0;
+#endif
+                          gpu_for_global(0, np, [&](gpu_uint p) {
+                              gpu_uint a = gpu_uint(gpu_uint64(pnum) * p / np);
+                              Vector<GPU_DOUBLE, 3> F = { 0, 0, 0 };
+                              GPU_DOUBLE P = 0;
+                              gpu_for(0, pnum, [&](gpu_uint b) {
+                                  auto distf = x[b] - x[a];
+                                  Vector<GPU_DOUBLE, 3> dist;
+                                  for (Tuint k = 0; k < 3; ++k)
+                                  {
+                                      dist[k] = (GPU_DOUBLE)(distf[k]);
+                                  }
+                                  F += static_cast<GPU_DOUBLE>(mass[b]) * dist * pow<-3, 2>(dist.squaredNorm() + 1E-20);
+                                  P += cond(b == a, 0., -mass[b] * pow<-1, 2>(dist.squaredNorm() + 1E-20));
+                              });
+                              ret += (force[a].template cast<GPU_DOUBLE>() * (1.0 / DT()) - F).squaredNorm();
+#if CALC_POTENTIAL
+                              poterr += pow2(potential[a] - P);
+#endif
+                          });
+                          return ret;
+                      });
+
+        vector<Tdouble> tottimevec;
+        for (Tuint k = 0; k < 5; ++k)
+        {
+            v.fill({ 0, 0, 0 });
+
+            device.wait_all();
+
+            auto t0 = steady_clock::now();
+            make_tree();
+            device.wait_all();
+            auto t1 = steady_clock::now();
+
+            tottimevec.push_back(duration<double>(t1 - t0).count());
+        }
+        std::sort(tottimevec.begin(), tottimevec.end());
+        cout << "tottime=" << tottimevec << endl;
+
+        const Tuint np = min(x.size(), (Tuint)100);
+
+        goopax_future<Tdouble> poterr;
+        Tdouble tot = verify(x,
+                             mass,
+                             v,
+#if CALC_POTENTIAL
+                             poterr,
+                             potential,
+#endif
+                             x.size(),
+                             np)
+                          .get();
+        cout << "err=" << sqrt(tot / np) << ", poterr=" << sqrt(poterr.get() / np) << endl;
     }
 
     cosmos_base(goopax_device device, Tsize_t N, Tdouble max_distfac)
@@ -1666,13 +1638,6 @@ struct cosmos : public cosmos_base<T>
                                       bigblocksums,
                                       numsubbuf);
 
-                // cout << "after treecount3: tree[" << treeoffset << "..." << treeoffset+treesize << "]=";
-                // tree.dump(cout, 1, treeoffset, treeoffset+treesize);
-                // cout << endl;
-                // cout << "FULL:\n" << tree << endl;
-
-                // Tuint num_sub = bigblocksums[(treesize+global_size()-1)/global_size()-1];
-
                 const_buffer_map<Tuint> numsubbuf(this->numsubbuf);
                 const Tuint num_sub = numsubbuf[0];
                 cout1 << "num_sub=" << num_sub << endl;
@@ -1724,26 +1689,23 @@ struct cosmos : public cosmos_base<T>
         auto t2 = steady_clock::now();
 #endif
 
-        // buffer<Vector<CTfloat, 3>> force(plist1.size());
+        if (treerange.size() > MAX_DEPTH())
         {
-            if (treerange.size() > MAX_DEPTH())
-            {
-                cerr << "treerange.size()=" << treerange.size() << " > MAX_DEPTH=" << MAX_DEPTH() << endl;
-                throw std::runtime_error("MAX_DEPTH exceeded");
-            }
-
-            downwards(tree,
-                      local_tree,
-                      vicinity_tree,
-                      x,
-                      plist1,
-                      plist1.size(),
-                      mass,
-#if CALC_POTENTIAL
-                      potential,
-#endif
-                      v);
+            cerr << "treerange.size()=" << treerange.size() << " > MAX_DEPTH=" << MAX_DEPTH() << endl;
+            throw std::runtime_error("MAX_DEPTH exceeded");
         }
+
+        downwards(tree,
+                  local_tree,
+                  vicinity_tree,
+                  x,
+                  plist1,
+                  plist1.size(),
+                  mass,
+#if CALC_POTENTIAL
+                  potential,
+#endif
+                  v);
 
 #if WITH_TIMINGS
         x.get_device().wait_all();
@@ -1941,8 +1903,6 @@ struct cosmos : public cosmos_base<T>
                    resource<T>& potential,
 #endif
                    resource<Vector<T, 3>>& v) {
-                // const vicinity_data& vdata = Cosmos.vdata;
-                // const auto tree_depthbits = Cosmos.tree_depthbits;
                 vector<gpu_uint> COUNT(13, 0);
                 using bignodeshift_and_t = typename std::conditional<sizeof(T) == 8, gpu_uint64, gpu_uint>::type;
 
@@ -2003,7 +1963,6 @@ struct cosmos : public cosmos_base<T>
                 gpu_signature_t id_bignode = 0;
                 gpu_uint depth_bm = 1;
                 gpu_uint child_mod3 = MAX_BIGNODE_BITS() - 1;
-                //      gpu_T unity_bignode_shift = 0.5;
                 bignodeshift_and_t bignodeshift_and = 0;
                 bignodeshift_and -= 2;
 
@@ -2068,25 +2027,6 @@ struct cosmos : public cosmos_base<T>
                                 vt_child.pbegin = tree[fc + (sub & 1)].pbegin;
                                 vt_child.pend = tree[fc + (sub & 1)].pend;
                                 vt_child.Mr = tree[fc + (sub & 1)].Mr;
-                                /*
-                                                if (DEBUG1)
-                                                {
-                                                    check_particles<gpu_T>(__LINE__,
-                                                                           vt_child.pbegin,
-                                                                           vt_child.pend,
-                                                                           vt_child_center_r,
-                                                                           depth_bm + MAX_BIGNODE_BITS() + sub_bits - 1,
-                                                                           x,
-                #if TEST_ID
-                                                                           vt_child.ID,
-                                                                           (gpu_bool)vt_child.ID_init,
-                #endif
-                                                                           plist,
-                                                                           pbegin,
-                                                                           pend,
-                                                                           num_particles);
-                                                }
-                                */
                             }
 
                             gpu_if(vicinity_tree[vt_parent_p * num_sub + parent_sub].first_child == 0)
@@ -2097,7 +2037,6 @@ struct cosmos : public cosmos_base<T>
                                 const gpu_signature_t bitmask =
                                     (gpu_signature_t(1)
                                      << (MAX_DEPTH() - depth_bm - MAX_BIGNODE_BITS() - this->sub_bits + 1));
-                                // const gpu_uint begin = vtp_fp;
                                 const gpu_uint end = find_particle_split(
                                     plist, vtp_pb, vtp_pe, [&](gpu_signature_t id) { return ((id & bitmask) == 0); });
                                 vt_child.pbegin = cond((sub & 1) == 0, vtp_pb, end);
@@ -2107,19 +2046,6 @@ struct cosmos : public cosmos_base<T>
                                     gpu_if(child_mod3 == mod3)
                                     {
                                         vt_child.Mr = multipole<T, max_multipole>::from_particle({ 0, 0, 0 }, 0);
-
-                                        /*
-                                                            if (DEBUG1)
-                                                            {
-                                                                check_particles<gpu_T>(__LINE__,
-                                                                                       vt_child.pbegin,
-                                                                                       vt_child.pend,
-                                                                                       vt_child_center_r,
-                                                                                       depth_bm + MAX_BIGNODE_BITS() +
-                    sub_bits - 1, x, #if TEST_ID vt_child.ID, (gpu_bool)vt_child.ID_init, #endif plist, pbegin, pend,
-                                                                                       num_particles);
-                                                            }
-                                        */
 
                                         gpu_for(vt_child.pbegin, vt_child.pend, [&](gpu_uint p) {
                                             ++COUNT[4];
@@ -2208,21 +2134,6 @@ struct cosmos : public cosmos_base<T>
                         const gpu_uint end = max(min(lt_pe, pend), pbegin);
                         local_tree[lt_p * num_sub + sub].pbegin = begin;
                         local_tree[lt_p * num_sub + sub].pend = end;
-                        /*
-                                    if (DEBUG1)
-                                    {
-                                        check_particles<gpu_T>(
-                                            __LINE__,
-                                            begin,
-                                            end,
-                                            center_child_r,
-                                            depth_bm + MAX_BIGNODE_BITS() + sub_bits - 1,
-                                            x,
-            #if TEST_ID
-                                            vicinity_tree[(vicinity_offset + localpos + local_offset) * num_sub +
-            sub].ID, true, #endif plist, pbegin, pend, num_particles);
-                                    }
-                        */
                     }
                     local_tree.barrier();
 
@@ -2463,10 +2374,8 @@ struct cosmos : public cosmos_base<T>
                                         begin += ssize * blocksize;
                                     }
                                 };
-                                //++COUNT[10];
                                 FUNC(9, 5, local_id(), local_size(), 0, 1);
                                 FUNC(10, 5, other_sub, num_sub, sub, num_sub);
-                                //++COUNT[13];
                                 FUNC(11, 1, other_sub, num_sub, sub, num_sub);
                                 if (DEBUG1)
                                     gpu_assert(end - begin < num_sub);
@@ -2544,146 +2453,9 @@ struct cosmos : public cosmos_base<T>
     }
 };
 
-#if PRECISION_TEST
-template<class T, unsigned int max_multipole>
-void perftest(goopax_device device, ostream& plot)
-{
-    std::stringstream sm;
-    sm << max_multipole;
-
-    kernel verify(device,
-                  [](const resource<Vector<T, 3>>& x,
-                     const resource<T>& mass,
-                     const resource<Vector<T, 3>>& force,
-#if CALC_POTENTIAL
-                     gather_add<TDOUBLE>& poterr,
-                     const resource<T>& potential,
-#endif
-                     resource<Vector<CTDOUBLE, 3>>& testforce,
-                     resource<CTDOUBLE>& testpot,
-                     resource<CTuint>& alist,
-                     gpu_uint pnum,
-                     gpu_uint np) -> gather_add<double> {
-                      // cout << "verify: local_size()=" << local_size() << ", global_size()=" << global_size() << endl;
-                      GPU_DOUBLE ret = 0;
-#if CALC_POTENTIAL
-                      poterr = 0;
-#endif
-                      gpu_for_global(0, np, [&](gpu_uint p) {
-                          gpu_uint a = gpu_uint(gpu_uint64(pnum) * p / np);
-                          alist[p] = a;
-                          Vector<GPU_DOUBLE, 3> F = { 0, 0, 0 };
-                          GPU_DOUBLE P = 0;
-                          gpu_for(0, pnum, [&](gpu_uint b) {
-                              auto distf = x[b] - x[a];
-                              Vector<GPU_DOUBLE, 3> dist;
-                              for (Tuint k = 0; k < 3; ++k)
-                              {
-                                  dist[k] = (GPU_DOUBLE)(distf[k]);
-                              }
-                              F += static_cast<GPU_DOUBLE>(mass[b]) * dist * pow<-3, 2>(dist.squaredNorm() + 1E-20);
-                              P += cond(b == a, 0, -mass[b] * pow<-1, 2>(dist.squaredNorm() + 1E-20));
-                          });
-                          testforce[p] = F;
-                          testpot[p] = P;
-                          ret += (force[a].template cast<GPU_DOUBLE>() - F).squaredNorm();
-#if CALC_POTENTIAL
-                          poterr += pow2(potential[a] - P);
-#endif
-                      });
-                      return ret;
-                  });
-
-    // cout << "particles at x=" << Cosmos.x << endl;
-
-    // auto rkgweg = push(static_cast<Tdouble&>(DT), 1);
-    Tdouble old_DT = DT;
-    DT = 1;
-    for (Tdouble max_distfac = 1.1; max_distfac < 20.5; max_distfac *= 1.3)
-    {
-        cout << "testing. max_distfac=" << max_distfac << endl;
-        try
-        {
-            cosmos<T, max_multipole> Cosmos(device, NUM_PARTICLES(), max_distfac);
-            vector<Tdouble> tottimevec;
-            for (Tuint k = 0; k < 5; ++k)
-            {
-                Cosmos.v.fill({ 0, 0, 0 });
-
-                device.wait_all();
-
-                auto t0 = steady_clock::now();
-                Cosmos.make_tree();
-                device.wait_all();
-                auto t1 = steady_clock::now();
-
-                tottimevec.push_back(duration<double>(t1 - t0).count());
-            }
-            std::sort(tottimevec.begin(), tottimevec.end());
-            cout << "tottime=" << tottimevec << endl;
-
-            const Tuint np = min(Cosmos.x.size(), (Tuint)100);
-
-            buffer<Vector<CTDOUBLE, 3>> testforce(device, np);
-            buffer<CTDOUBLE> testpot(device, np);
-            buffer<CTuint> alist(device, np);
-
-            goopax_future<Tdouble> poterr;
-            Tdouble tot = verify(Cosmos.x,
-                                 Cosmos.mass,
-                                 Cosmos.v,
-#if CALC_POTENTIAL
-                                 poterr,
-                                 Cosmos.potential,
-#endif
-                                 testforce,
-                                 testpot,
-                                 alist,
-                                 Cosmos.x.size(),
-                                 np)
-                              .get();
-            cout << "err=" << sqrt(tot / np) << ", poterr=" << sqrt(poterr.get() / np) << endl;
-
-            plot << max_multipole << " " << max_distfac << " " << sqrt(tot / np)
-#if CALC_POTENTIAL
-                 << " " << sqrt(poterr.get() / np)
-#endif
-                 << " " << tottimevec[0] << endl;
-        }
-        catch (std::exception& e)
-        {
-            cout << "Got e=" << e.what() << endl;
-        }
-    }
-    DT = old_DT;
-}
-#endif
-
 int main(int argc, char** argv)
 {
     init_params(argc, argv);
-
-#if PRECISION_TEST
-    {
-#if GOOPAX_DEBUG
-        goopax_device device = default_device(env_CPU);
-        device.force_global_size(960);
-#else
-        goopax_device device = default_device(env_ALL);
-#endif
-
-        ofstream plot("perftest");
-
-        using T = Tfloat;
-
-        perftest<T, 1>(device, plot);
-        perftest<T, 2>(device, plot);
-        perftest<T, 3>(device, plot);
-        perftest<T, 4>(device, plot);
-
-        return 0;
-    }
-#endif
 
     unique_ptr<sdl_window> window = sdl_window::create("fmm nbody",
                                                        { 1024, 768 },
@@ -2692,6 +2464,7 @@ int main(int argc, char** argv)
     goopax_device device = window->device;
 
 #if GOOPAX_DEBUG
+    // Increasing number of threads to be able to check for race conditions.
     device.force_global_size(192);
 #endif
 
@@ -2714,11 +2487,20 @@ int main(int argc, char** argv)
         Cosmos.make_IC(argv[1]);
     }
 
+    if (PRECISION_TEST())
+    {
+        Cosmos.precision_test();
+        return 0;
+    }
+
     kernel set_colors(device, [&](const resource<Vector<Tfloat, 3>>& cx) {
         gpu_for_global(0, x.size(), [&](gpu_uint k) {
             color[k] = ::color(Cosmos.potential[k]);
             x[k] = cx[k];
             // Tweaking z coordinate to use potential for depth testing.
+            // Particles are displayed according to their x and y coordinates.
+            // If multiple particles are drawn at the same pixel, the one with the
+            // highest potential will be shown.
             x[k][2] = -Cosmos.potential[k] * 0.01f;
         });
     });
