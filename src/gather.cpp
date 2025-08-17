@@ -3,8 +3,8 @@
    Demonstrates the use of the gather mechanism to get return values from kernel calls.
  */
 
-#include <draw/types.h>
 #include <goopax>
+#include <goopax_draw/types.h>
 #include <goopax_extra/output.hpp>
 #include <goopax_extra/random.hpp>
 #include <goopax_extra/struct_types.hpp>

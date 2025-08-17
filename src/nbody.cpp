@@ -6,7 +6,7 @@
 #include "common/particle.hpp"
 #include <SDL3/SDL_main.h>
 #include <chrono>
-#include <draw/window_sdl.h>
+#include <goopax_draw/window_sdl.h>
 #include <goopax_extra/param.hpp>
 #include <random>
 

@@ -1,11 +1,11 @@
 #pragma once
 
 #if WITH_METAL
-#include "draw/window_metal.h"
+#include <goopax_draw/window_metal.h>
 #endif
 
 #if WITH_OPENGL
-#include "draw/window_gl.h"
+#include <goopax_draw/window_gl.h>
 #ifdef __linux__
 #include <GL/glx.h>
 #endif

@@ -6,8 +6,8 @@
 
 #include <cassert>
 #include <chrono>
-#include <draw/types.h>
 #include <goopax>
+#include <goopax_draw/types.h>
 #include <goopax_extra/param.hpp>
 #include <goopax_extra/random.hpp>
 #include <random>
