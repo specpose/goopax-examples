@@ -758,7 +758,7 @@ template<class T>
 auto calc_sig_fast(const Vector<T, 3>& x, Tuint64_t)
 {
     const Tuint max_depthbits = 64;
-    using sig_t = typename gettype<T>::template change<Tuint64_t>::type;
+    using sig_t = typename change_gpu_mode<Tuint64_t, T>::type;
 
     Vector<Tuint, 3> depth = { (max_depthbits + 2) / 3, (max_depthbits + 1) / 3, (max_depthbits) / 3 };
     sig_t sig = 0;
@@ -791,7 +791,7 @@ auto calc_sig_fast(const Vector<T, 3>& x, Tuint64_t)
 template<class signature_t, class T>
 auto calc_sig(const Vector<T, 3>& x, Tuint max_depthbits)
 {
-    using sig_t = typename gettype<T>::template change<signature_t>::type;
+    using sig_t = typename change_gpu_mode<signature_t, T>::type;
     assert(max_depthbits >= 3);
     assert(max_depthbits <= get_size<sig_t>::value * 8);
     Vector<Tuint, 3> depth = { (max_depthbits + 2) / 3, (max_depthbits + 1) / 3, (max_depthbits) / 3 };

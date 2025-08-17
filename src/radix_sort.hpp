@@ -203,7 +203,7 @@ struct radix_sort
                         begin += size;
                     }
                 }
-                bigrangevec = move(newbigrangevec);
+                bigrangevec = std::move(newbigrangevec);
             }
 
             // cout << "bigrange=" << bigrangevec << endl;
