@@ -6,7 +6,7 @@
 #include <SDL3/SDL_main.h>
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <chrono>
-#include <draw/window_sdl.h>
+#include <goopax_draw/window_sdl.h>
 #include <goopax_extra/struct_types.hpp>
 
 using namespace goopax;
@@ -295,7 +295,7 @@ public:
                                       gpu_uint s2u = reinterpret<Tuint>(1.f);
                                       s2u -= shift << 23;
                                       auto scale2 = reinterpret<gpu_float>(s2u);
-                                      gpu_float scalefac = cond(shift >= 127u, 0, (gpu_float)scale2);
+                                      gpu_float scalefac = cond(shift >= 127u, 0.f, (gpu_float)scale2);
 
                                       z = zc[iter] + dz * scalefac;
                                       maxz = max(maxz, (gpu_float)norm(zc[iter] + dz * scalefac));
@@ -318,10 +318,10 @@ public:
 
                                   gpu_if(norm(z) >= 4.f)
                                   {
-                                      gpu_float x = (iter - log2(log2(norm(z)))) * 0.1f;
-                                      color[0] = 0.5f + 0.5f * sin(x);
-                                      color[1] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 2. / 3));
-                                      color[2] = 0.5f + 0.5f * sin(x + static_cast<float>(PI * 4. / 3));
+                                      gpu_float x = (iter - log2(log2(norm(z)))) * 0.03f;
+                                      color[0] = 0.5f + 0.5f * sinpi(x);
+                                      color[1] = 0.5f + 0.5f * sinpi(x + 2.f / 3);
+                                      color[2] = 0.5f + 0.5f * sinpi(x + 4.f / 3);
                                   }
 
                                   image.write(position, color); // Set the color according to the escape time
@@ -356,7 +356,6 @@ int main(int, char**)
     using namespace boost::multiprecision;
 
     bool quit = false;
-    bool is_fullscreen = false;
 
     map<SDL_FingerID, Vector<float, 2>> finger_positions;
 
@@ -438,17 +437,9 @@ int main(int, char**)
                     case SDLK_ESCAPE:
                         quit = true;
                         break;
-                    case SDLK_F: {
-                        if (SDL_SetWindowFullscreen(window->window, !is_fullscreen))
-                        {
-                            is_fullscreen = !is_fullscreen;
-                        }
-                        else
-                        {
-                            cerr << "Fullscreen failed: " << SDL_GetError() << endl;
-                        }
-                    }
-                    break;
+                    case SDLK_F:
+                        window->toggle_fullscreen();
+                        break;
                 };
             }
         }

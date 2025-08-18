@@ -1,11 +1,11 @@
 #pragma once
 
 #if WITH_METAL
-#include "draw/window_metal.h"
+#include <goopax_draw/window_metal.h>
 #endif
 
 #if WITH_OPENGL
-#include "draw/window_gl.h"
+#include <goopax_draw/window_gl.h>
 #ifdef __linux__
 #include <GL/glx.h>
 #endif
@@ -185,7 +185,6 @@ void render(SDL_Window* window, const opengl_buffer<Eigen::Vector3<float>>& x)
 {
     goopax::goopax_device device = x.get_device();
 
-    //    device.wait_all();
     goopax::flush_graphics_interop(device);
     int width, height;
     SDL_GetWindowSize(window, &width, &height);
@@ -193,8 +192,8 @@ void render(SDL_Window* window, const opengl_buffer<Eigen::Vector3<float>>& x)
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glEnable(GL_BLEND);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glPointSize(3.0);
     glColor4f(1.0f, 1, 1, 1.0);
 
@@ -214,4 +213,53 @@ void render(SDL_Window* window, const opengl_buffer<Eigen::Vector3<float>>& x)
     glDrawArrays(GL_POINTS, 0, x.size());
     glDisableClientState(GL_VERTEX_ARRAY);
 }
+
+void render(SDL_Window* window,
+            const opengl_buffer<Eigen::Vector3<float>>& x,
+            const opengl_buffer<Eigen::Vector4<float>>* color)
+{
+    goopax::goopax_device device = x.get_device();
+
+    goopax::flush_graphics_interop(device);
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glPointSize(1.0);
+    if (color)
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, color->gl_id);
+        glColorPointer(4, GL_FLOAT, 0, nullptr);
+        glEnableClientState(GL_COLOR_ARRAY);
+    }
+    else
+    {
+        glColor4f(1.0f, 1, 1, 1.0);
+    }
+
+    glViewport(0, 0, width, height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    Tdouble ar = Tdouble(width) / height;
+    Tdouble scale = 0.7;
+    glOrtho(-scale * ar, scale * ar, -scale, scale, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glBindBuffer(GL_ARRAY_BUFFER, x.gl_id);
+    glVertexPointer(3, GL_FLOAT, 0, nullptr);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glDrawArrays(GL_POINTS, 0, x.size());
+    glDisableClientState(GL_VERTEX_ARRAY);
+    if (color)
+    {
+        glDisableClientState(GL_COLOR_ARRAY);
+    }
+}
+
 #endif

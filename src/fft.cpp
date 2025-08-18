@@ -5,7 +5,7 @@
  */
 
 #include <SDL3/SDL_main.h>
-#include <draw/window_sdl.h>
+#include <goopax_draw/window_sdl.h>
 #include <goopax_extra/fft.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -84,7 +84,7 @@ struct fftdata
                         [&](gpu_uint x) {
                             return complex<gpu_float>(input[y * size[0] + x][channel] * (1.f / 255), 0);
                         },
-                        [&](gpu_uint x, complex<gpu_float> value) { resource(this->tmp1)[y * size[0] + x] = value; },
+                        [&](gpu_uint x, complex<gpu_float> value) { this->tmp1[y * size[0] + x] = value; },
                         size[0],
                         ls);
                 });
@@ -103,8 +103,8 @@ struct fftdata
 
             gpu_for(gid, size[0], ng, [&](gpu_uint x) {
                 fft_workgroup<gpu_float>(
-                    [&](gpu_uint y) { return resource(this->tmp1)[y * size[0] + x]; },
-                    [&](gpu_uint y, complex<gpu_float> value) { resource(this->tmp2)[y * size[0] + x] = value; },
+                    [&](gpu_uint y) { return this->tmp1[y * size[0] + x]; },
+                    [&](gpu_uint y, complex<gpu_float> value) { this->tmp2[y * size[0] + x] = value; },
                     size[1],
                     ls);
             });
@@ -116,8 +116,8 @@ struct fftdata
             const uint ng = global_size() / ls;
             gpu_for(gid, size[0], ng, [&](gpu_uint x) {
                 ifft_workgroup<gpu_float>(
-                    [&](gpu_uint y) { return resource(this->tmp2)[y * size[0] + x]; },
-                    [&](gpu_uint y, complex<gpu_float> value) { resource(this->tmp1)[y * size[0] + x] = value; },
+                    [&](gpu_uint y) { return this->tmp2[y * size[0] + x]; },
+                    [&](gpu_uint y, complex<gpu_float> value) { this->tmp1[y * size[0] + x] = value; },
                     size[1],
                     ls);
             });
@@ -132,7 +132,7 @@ struct fftdata
                 const uint ng = global_size() / ls;
 
                 gpu_for(gid, size[1], ng, [&](gpu_uint y) {
-                    ifft_workgroup<gpu_float>([&](gpu_uint x) { return resource(this->tmp1)[y * size[0] + x]; },
+                    ifft_workgroup<gpu_float>([&](gpu_uint x) { return this->tmp1[y * size[0] + x]; },
                                               [&](gpu_uint x, complex<gpu_float> value) {
                                                   Vector<gpu_float, 4> c = frame.read({ x, y });
                                                   c[swap_RB ? 2 - channel : channel] = value.real();
@@ -152,7 +152,7 @@ struct fftdata
             gpu_for_group(0, size[1], [&](gpu_uint y) {
                 gpu_for_local(0, size[0], [&](gpu_uint x) {
                     // Doing some stuff with the FFT image. Suppressing short wavelengths.
-                    resource(this->tmp2)[y * size[0] + x] *= 20.f / (20.f + x * x + y * y);
+                    this->tmp2[y * size[0] + x] *= 20.f / (20.f + x * x + y * y);
                 });
             });
         });
