@@ -46,10 +46,12 @@ To build for the iOS simulator, follow the steps for iOS, but with the additiona
 
 Cross-Compiling for Android
 ---------------------------
-Set the ANDROID_NDK_ROOT environment variable to the location of the Android NDK.
+Set the PATH variable so that both ninja and corresponding cmake are found.
+
+    export PATH=$HOME/Android/Sdk/cmake/4.1.0/bin:$PATH
 
 Then run something like this:
 
-    ./build-all.sh -G Ninja -DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=25 -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a -DCMAKE_POSITION_INDEPENDENT_CODE=1
+    build_type="release" ABI="arm64-v8a" platform_version_string="android-28" android_ndk="$HOME/Android/Sdk/ndk/29.0.13846066" bash -c './build-all.sh -G "Ninja" -DCMAKE_SYSTEM_NAME="Android" -DCMAKE_ANDROID_STL_TYPE="c++_static" -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="$platform_version_string" -DANDROID_NDK="$android_ndk" -DCMAKE_TOOLCHAIN_FILE="$android_ndk/build/cmake/android.toolchain.cmake" -DCMAKE_FIND_ROOT_PATH="$PWD/../;$PWD/build/$build_type/$ABI/ext/boost;$PWD/build/$build_type/$ABI/ext/opencv/sdk/native/jni;$PWD/build/$build_type/$ABI/ext/eigen;$PWD/build/$build_type/$ABI/ext/sdl3" -DGOOPAX_DRAW_WITH_OPENGL=0 -DGOOPAX_DRAW_WITH_METAL=0 -DGOOPAX_DRAW_WITH_VULKAN=1'
 
 For the graphical SDL-based example programs, shared libraries are created. They need to be further incorporated into an android app. For a simple test, (https://github.com/specpose/goopax-template-android) may be sufficient.
