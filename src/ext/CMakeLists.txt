@@ -2,7 +2,6 @@ add_custom_target(build_external_libraries)
 include(ExternalProject)
 
 set(MY_OPENCV_ARGS "-DOpenCV_STATIC=ON")
-set(MY_BOOST_ARGS "")
 if (ANDROID)
   set(MY_SDL_GIT_TAG release-3.2.18)
   set(MY_SDL_ARGS
@@ -36,7 +35,6 @@ elseif (ANDROID OR IOS)
       -DCMAKE_ANDROID_ARCH_ABI=${CMAKE_ANDROID_ARCH_ABI}
       -DCMAKE_ANDROID_NDK=${CMAKE_ANDROID_NDK}
       -DCMAKE_POSITION_INDEPENDENT_CODE=${CMAKE_POSITION_INDEPENDENT_CODE})
-    list(APPEND MY_BOOST_ARGS "-DBOOST_EXCLUDE_LIBRARIES=process")
     list(APPEND MY_OPENCV_ARGS
       -DANDROID_STL=${CMAKE_ANDROID_STL_TYPE}
       -DBUILD_JAVA=0
@@ -50,7 +48,6 @@ elseif (ANDROID OR IOS)
     list(APPEND MY_CMAKE_ARGS
       -G Xcode
       -DCMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET=${CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET})
-    list(APPEND MY_BOOST_ARGS "-DBOOST_EXCLUDE_LIBRARIES=process|context|coroutine|fiber|asio|log|cobalt")
     set(MY_SDL_GIT_TAG 8f9a562969761ec626d298079c99341fd25b4644)
   endif()
 endif()
@@ -104,14 +101,12 @@ endif()
 
 ExternalProject_Add(
   build_boost
-  GIT_REPOSITORY https://github.com/boostorg/boost.git
-  GIT_TAG boost-1.86.0
-  GIT_SUBMODULES_RECURSE 1
+  URL https://github.com/boostorg/multiprecision/archive/refs/tags/Boost_1_86_0.zip
+  URL_HASH SHA256=855BD78A1A4EE18BFB385ACA54C153B55E4C97A137604BE951208B144DF7E3BD
   EXCLUDE_FROM_ALL 1
-  INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/boost"
-  LIST_SEPARATOR |   # Workaround to prevent MY_BOOST_ARGS from being treated as a list.
-  CMAKE_ARGS ${MY_CMAKE_ARGS} "${MY_BOOST_ARGS}"
-  "-DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/boost"
+  CONFIGURE_COMMAND ""
+  INSTALL_COMMAND ""
+  BUILD_COMMAND ""
 )
 if (NOT TARGET Boost::boost)
   add_dependencies(build_external_libraries build_boost)

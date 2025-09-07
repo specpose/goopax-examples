@@ -29,7 +29,7 @@ endif()
 find_package(goopax REQUIRED PATHS ../..)
 find_package(TBB)
 find_package(OpenCL)
-find_package(Boost 1.65.0 COMPONENTS multiprecision PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/boost")
+find_package(Boost 1.65.0 COMPONENTS multiprecision)
 find_package(SDL3 PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/sdl3")
 find_package(Eigen3 3.3 NO_MODULE PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/eigen")
 
@@ -38,6 +38,10 @@ if (WIN32)
 endif()
 find_package(OpenCV PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/opencv" "${CMAKE_CURRENT_BINARY_DIR}/ext/opencv/sdk/native/jni")
 
+find_path(BOOST_INCLUDE_DIR
+  boost/multiprecision/cpp_bin_float.hpp
+  PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/build_boost-prefix/src/build_boost/include"
+)
 find_path(GLATTER_INCLUDE_DIR
   glatter/glatter.h
   PATHS "${CMAKE_CURRENT_BINARY_DIR}/ext/build_glatter-prefix/src/build_glatter/include"
@@ -52,6 +56,10 @@ endif()
 if (GLATTER_INCLUDE_DIR)
   add_library(glatter INTERFACE)
   target_include_directories(glatter SYSTEM INTERFACE "${GLATTER_INCLUDE_DIR}")
+endif()
+if (BOOST_INCLUDE_DIR)
+  add_library(boost INTERFACE)
+  target_include_directories(boost SYSTEM INTERFACE "${BOOST_INCLUDE_DIR}")
 endif()
 
 if (APPLE)
@@ -157,7 +165,12 @@ if (TARGET cosmology)
   endif()
 endif()
 
-add_sdl_main(deep-zoom-mandelbrot Boost::boost goopax_draw)
+if (TARGET Boost::boost)
+  add_sdl_main(deep-zoom-mandelbrot Boost::boost goopax_draw)
+else()
+  add_sdl_main(deep-zoom-mandelbrot boost goopax_draw)
+endif()
+
 add_sdl_main(mandelbrot goopax_draw)
 add_sdl_main(mandelbrot-unspecified goopax_draw)
 add_sdl_main(fft opencv goopax_draw)
