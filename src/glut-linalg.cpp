@@ -1,6 +1,7 @@
 #include <array>
 #include <iterator>
 #include <vector>
+#include <iostream>
 
 template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
 class Vector
@@ -15,6 +16,25 @@ public:
 
     std::array<T, Size> coords;
 };
+
+template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
+Vector<T,Size,tf> operator+(const Vector<T, Size, tf>& a, const Vector<T, Size, tf>& b)
+{
+    auto c = Vector<T, Size, tf>{};
+    for (int i = 0; i < Size; ++i)
+        c.coords[i] = a.coords[i] + b.coords[i];
+    return c;
+}
+
+template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
+std::ostream& operator<<(std::ostream& os,const Vector<T,Size,tf>& v)
+{
+    os << "(";
+    for (int i = 0; i < Size; ++i)
+        os << v.coords[i] << ",";
+    os << ")" << std::endl;
+    return os;
+}
 
 // template<typename Container, typename tf = typename std::enable_if_t<std::is_pod<typename
 // Container::value_type>::value>> class Vectors;//forward declaration! same as in real declaration below
@@ -142,8 +162,11 @@ template<typename T, size_t Size, typename tf> Vector<T, Size,tf>& Vector<T,Size
 template<typename Container, typename tf> Vectors<Container,tf>::Vectors() : Container() {
 }
 
-template<typename Container, typename tf> Vectors<Container,tf>::Vectors(const Container& other) : Container(other) {
-//	int test = 5/0;
+/* template<typename Container, typename tf>
+Vectors<Container, tf>::Vectors(const Container& other)
+    : Container(other)
+{
+    //	int test = 5/0;
 //	*this = Vectors<Container,tf>();//other;
 }
 
@@ -154,11 +177,13 @@ template<typename Container, typename tf> Vectors<Container,tf>::Vectors(Contain
 	//*this = std::move(other);
 }
 
-template<typename Container, typename tf> Vectors<Container,tf>& Vectors<Container,tf>::operator=(Container&& other) {
+template<typename Container, typename tf>
+Vectors<Container, tf>& Vectors<Container, tf>::operator=(Container&& other)
+{
 	//Vectors<Container,tf> temp = std::move(other);
 	Container::operator=(std::move(other));
 	return *this;
-}
+}*/
 
 //propagating: par
 template<typename Container, typename tf>void Vectors<Container,tf>::apply(Stack<Container>& stack) {
@@ -213,7 +238,7 @@ template<typename Container> Matrix<Container> Matrix<Container>::identity() {
 		T(0),T(1),T(0),
 		T(0),T(0),T(1)
 	};
-	return std::move(m);
+	return m;
 }
 
 template<typename Container> typename Container::value_type::value_type Matrix<Container>::det() {
@@ -235,7 +260,7 @@ template<typename Container> Matrix<Container> Matrix<Container>::scale(T x, T y
 		T(0),T(y),T(0),
 		T(0),T(0),T(1)
 	};
-	return std::move(m);
+	return m;
 }
 
 template<typename Container> Matrix<Container> Matrix<Container>::rotate(T deg) {
@@ -244,7 +269,7 @@ template<typename Container> Matrix<Container> Matrix<Container>::rotate(T deg) 
 						T(sin(rad)),T(cos(rad)),T(0),
 						T(0),T(0),T(1)
 	};
-	return std::move(m);
+	return m;
 }
 
 template<typename Container> Matrix<Container> Matrix<Container>::translate(T x, T y) {
@@ -252,7 +277,7 @@ template<typename Container> Matrix<Container> Matrix<Container>::translate(T x,
 		T(0),T(1),T(y),
 		T(0),T(0),T(1)
 	};
-	return std::move(m);
+	return m;
 }
 
 template<typename Container>double Matrix<Container>::_radToDeg(double rad) { return rad * (180.0 / M_PI); }//  pi/rad = 180/x, x(pi/rad)=180, x=180/(pi/rad)
@@ -269,7 +294,7 @@ template<typename Container> Matrix<Container> Matrix<Container>::mul(const Matr
 						a.elems[6] * b.elems[1]+a.elems[7] * b.elems[4]+a.elems[8] * b.elems[7],	//c21
 						a.elems[6] * b.elems[2]+a.elems[7] * b.elems[5]+a.elems[8] * b.elems[8]		//c22
 	};
-	return std::move(m);
+	return m;
 }
 
 //this may have to be compiled with a different compiler: NOT HEADER ONLY
@@ -328,5 +353,60 @@ template<typename Container> void Stack<Container>::translate(T x,T y){
 
 int main()
 {
+	using T = double;
+	using C = typename std::vector<Vector<T>>;
+    auto st = Stack<C>();
+    st.identity();
+    //st.scale(2, 2);
+
+	auto sq = Vectors<C>();
+    T square = 0.5;
+    sq.push_back({ square, square });
+    sq.push_back({ -square, square });
+    sq.push_back({ -square, -square });
+    sq.push_back({ square, -square });
+    sq.push_back({ square, square });
+    sq.apply(st);
+	//drawVectors(sq);
+    //std::for_each(std::begin(sq), std::end(sq), [](auto& v) { std::cout << v << ","; });
+
+	auto _data_sink = C();
+    C::value_type v1 = {1,0};
+    C::value_type v2 = { sqrt(2) / 2, sqrt(2) / 2 };
+    C::value_type v3 = { 0,1 };
+    _data_sink.push_back(v1);
+    _data_sink.push_back(v1 + v2);
+    _data_sink.push_back(v1 + v2 + v3);
+
+	//auto last_pair = _data_sink.back();//multiple tracks
+    auto last_pair = _data_sink;
+    auto left = last_pair;
+
+	auto middle1 = _data_sink[0];
+    auto middle2 = _data_sink[1];
+    double angle2 =
+        Matrix<C>::_radToDeg(atan2((middle2.coords[0] - middle1.coords[1]), (middle2.coords[0] - middle1.coords[1])));
+	//glRotatef(-angle2, 0.0f, 0.0f, 1.0f);
+    st.rotate(-angle2);
+    st.translate(-middle1.coords[0], -middle1.coords[1]);
+
+	//middle marker
+    Vectors<C> mid = Vectors<C>();
+    mid.push_back({ middle1.coords[0], middle1.coords[1] });
+    mid.push_back({ middle2.coords[0], middle2.coords[1] });
+    mid.apply(st);
+	//drawVectors(mid);
+    //std::for_each(std::begin(mid), std::end(mid), [](auto& v) { std::cout << v << ","; });
+
+    Vectors<C> vecs = Vectors<C>();
+    vecs.push_back({ 0, 0 });
+    for (int i = 0; i < left.size(); i++)
+    {
+        vecs.push_back({ left[i].coords[0], left[i].coords[1] });
+    }
+    vecs.apply(st);
+	//drawVectors(vecs);
+    std::for_each(std::begin(vecs), std::end(vecs), [](auto& v) { std::cout << v << ","; });
+
     return 0;
 }
