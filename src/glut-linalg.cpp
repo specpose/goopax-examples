@@ -7,18 +7,16 @@ template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<st
 class Vector
 {
 public:
-    using element = typename std::array<T, Size>;
-    typedef typename element::value_type value_type;
-    typedef typename element::reference reference;
+    using value_type = T;
+    static const size_t SIZE = Size;
 
     Vector(std::initializer_list<T> list);
-    Vector<T, Size, tf>& __init(std::initializer_list<T> list); // REMOVE: not a pod
 
     std::array<T, Size> coords;
 };
 
 template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-Vector<T,Size,tf> operator+(const Vector<T, Size, tf>& a, const Vector<T, Size, tf>& b)
+Vector<T,Size> operator+(const Vector<T, Size, tf>& a, const Vector<T, Size, tf>& b)
 {
     auto c = Vector<T, Size, tf>{};
     for (int i = 0; i < Size; ++i)
@@ -27,7 +25,7 @@ Vector<T,Size,tf> operator+(const Vector<T, Size, tf>& a, const Vector<T, Size, 
 }
 
 template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-std::ostream& operator<<(std::ostream& os,const Vector<T,Size,tf>& v)
+std::ostream& operator<<(std::ostream& os,const Vector<T,Size>& v)
 {
     os << "(";
     for (int i = 0; i < Size; ++i)
@@ -36,11 +34,7 @@ std::ostream& operator<<(std::ostream& os,const Vector<T,Size,tf>& v)
     return os;
 }
 
-// template<typename Container, typename tf = typename std::enable_if_t<std::is_pod<typename
-// Container::value_type>::value>> class Vectors;//forward declaration! same as in real declaration below
-// template<typename Container, typename tf = typename std::enable_if_t<std::is_trivially_constructible<typename
-// Container::value_type>::value>> class Vectors;//forward declaration! same as in real declaration below
-template<typename Container, typename tf = typename std::enable_if_t<true>>
+template<typename Container>
 class Vectors; // forward declaration! same as in real declaration below
 
 /* Row Major 2D*/
@@ -48,7 +42,6 @@ template<typename Container>
 class Matrix
 {
 public:
-    using PodClass = typename Container::value_type;
     using T = typename Container::value_type::value_type;
 
     friend class Matrix;
@@ -99,27 +92,19 @@ class Stack : public std::vector<Matrix<Container>>
 {
 
 public:
-    using PodClass = typename Container::value_type;
-    using T = typename PodClass::value_type;
+    using T = typename Container::value_type::value_type;
 
     Stack();
 
     void identity();
     void scale(T x, T y);
-    // this was void rotate(FLOAT deg); why?!
     void rotate(T deg);
     void translate(T x, T y);
 };
 
-template<typename Container,
-         typename // = typename std::enable_if_t<std::is_pod<PodClass>::value>
-         >        // same as in forward declaration above!
+template<typename Container>        // same as in forward declaration above!
 class Vectors : public Container
 {
-    // todo
-    // we cannot make Vectors a pod type
-    // AND std::vector can not use memory of numpy_array; (they're both in stack)
-    //-> no move constructor from numpy array
 public:
     using Container::Container;
     Vectors();
@@ -127,8 +112,7 @@ public:
     Vectors(Container&& other);
     Vectors& operator=(Container&& other);
 
-    using PodClass = typename Container::value_type;
-    using T = typename PodClass::value_type;
+    using T = typename Container::value_type::value_type;
 
     void apply(Stack<Container>& stack);
 
@@ -149,45 +133,31 @@ public:
 #define M_PI        3.14159265358979323846264338327950288
 #endif
 
-template<typename T, size_t Size, typename tf> Vector<T, Size, tf>::Vector(std::initializer_list<T> list) {
-	__init(list);
-}
-
-template<typename T, size_t Size, typename tf> Vector<T, Size,tf>& Vector<T,Size,tf>::__init(std::initializer_list<T> list) {
+template<typename T, size_t Size, typename tf>
+Vector<T, Size, tf>::Vector(std::initializer_list<T> list)
+{
 	std::copy(std::begin(list),std::end(list),std::begin(coords));
-	std::fill(std::begin(coords)+list.size(), std::end(coords), T(0));
-	return *this;
+	std::fill(std::begin(coords)+list.size(), std::end(coords), 0);
 }
 
-template<typename Container, typename tf> Vectors<Container,tf>::Vectors() : Container() {
+template<typename Container> Vectors<Container>::Vectors() : Container() {
 }
 
-/* template<typename Container, typename tf>
-Vectors<Container, tf>::Vectors(const Container& other)
-    : Container(other)
+template<typename Container>
+Vectors<Container>::Vectors(const Container& other)
+    : Container(other){}
+
+template<typename Container> Vectors<Container>::Vectors(Container&& other) : Container{std::move(other)} {}
+
+template<typename Container>
+Vectors<Container>& Vectors<Container>::operator=(Container&& other)
 {
-    //	int test = 5/0;
-//	*this = Vectors<Container,tf>();//other;
-}
-
-template<typename Container, typename tf> Vectors<Container,tf>::Vectors(Container&& other) : Container{std::move(other)} {
-	//Vectors<Container,tf> temp = std::move(other);
-	//*this = temp;
-	//*this = static_cast<Container>(other);
-	//*this = std::move(other);
-}
-
-template<typename Container, typename tf>
-Vectors<Container, tf>& Vectors<Container, tf>::operator=(Container&& other)
-{
-	//Vectors<Container,tf> temp = std::move(other);
 	Container::operator=(std::move(other));
 	return *this;
-}*/
+}
 
 //propagating: par
-template<typename Container, typename tf>void Vectors<Container,tf>::apply(Stack<Container>& stack) {
-	auto& me = *this;
+template<typename Container>void Vectors<Container>::apply(Stack<Container>& stack) {
 	auto first = std::find_if(std::begin(stack), std::end(stack), [](Matrix<Container>& m){ return !m.isSingular();});
 	if (first!=std::end(stack)){
 #if DEVELOPMENT
@@ -203,16 +173,16 @@ template<typename Container, typename tf>void Vectors<Container,tf>::apply(Stack
 			if (!m.isSingular())
 				all = Matrix<Container>::mul(all,m);
 		});
-		static const size_t size = PodClass{}.coords.size();
+        static const size_t size = Container::value_type::SIZE;
 		if (size < 2)
 			throw std::logic_error("Matrix class does not work with vector dimensions lower than 2");
 		else if (size == 2)
-			all.apply2(me);
+			all.apply2(*this);
 		else
-			all.apply3(me);
+			all.apply3(*this);
 	}
-	/*std::for_each(std::rbegin(stack), std::rend(stack), [&me](Matrix<Container>& m) {
-		m.apply(me);
+	/*std::for_each(std::rbegin(stack), std::rend(stack), [&this](Matrix<Container>& m) {
+		m.apply(*this);
 	});*/
 }
 
@@ -301,32 +271,23 @@ template<typename Container> Matrix<Container> Matrix<Container>::mul(const Matr
 //readonly: par_unseq
 template<typename Container> void Matrix<Container>::apply3(Vectors<Container>& transform) {
 	auto& e = elems;
-	std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](PodClass a) {
-		PodClass value{
+    std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](Container::value_type& a) {
+		Container::value_type value{
 		(e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
 		(e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
 		(e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2])
 		};
 		return value;
-		/*return PodClass{}.__init({
-			(e[0]* a.coords[0] +e[1]* a.coords[1] +e[2]* a.coords[2]),
-			(e[3]* a.coords[0] +e[4]* a.coords[1] +e[5]* a.coords[2]),
-			(e[6]* a.coords[0] +e[7]* a.coords[1] +e[8]* a.coords[2])}
-		);*/
 	});
 }
 template<typename Container> void Matrix<Container>::apply2(Vectors<Container>& transform) {
 	auto& e = elems;
-	std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](PodClass a) {
-		PodClass value{
+    std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](Container::value_type& a) {
+		Container::value_type value{
 		(e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
 		(e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1)
 		};
 		return value;
-		/*return PodClass{}.__init({
-			(e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
-			(e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1)}
-		);*/
 	});
 }
 
@@ -370,13 +331,10 @@ int main()
 	//drawVectors(sq);
     //std::for_each(std::begin(sq), std::end(sq), [](auto& v) { std::cout << v << ","; });
 
-	auto _data_sink = C();
-    C::value_type v1 = {1,0};
+	C::value_type v1 = { 1,0};
     C::value_type v2 = { sqrt(2) / 2, sqrt(2) / 2 };
     C::value_type v3 = { 0,1 };
-    _data_sink.push_back(v1);
-    _data_sink.push_back(v1 + v2);
-    _data_sink.push_back(v1 + v2 + v3);
+	auto _data_sink = C({ v1, v1+v2, v1+v2+v3 });
 
 	//auto last_pair = _data_sink.back();//multiple tracks
     auto last_pair = _data_sink;
