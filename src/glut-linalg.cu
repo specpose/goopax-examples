@@ -271,8 +271,8 @@ template<typename Container> Matrix<Container> Matrix<Container>::mul(const Matr
 //readonly: par_unseq
 template<typename Container> void Matrix<Container>::apply3(Vectors<Container>& transform) {
 	auto& e = elems;
-    std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](Container::value_type& a) {
-		Container::value_type value{
+    std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container::value_type& a) {
+		typename Container::value_type value{
 		(e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
 		(e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
 		(e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2])
@@ -282,8 +282,8 @@ template<typename Container> void Matrix<Container>::apply3(Vectors<Container>& 
 }
 template<typename Container> void Matrix<Container>::apply2(Vectors<Container>& transform) {
 	auto& e = elems;
-    std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](Container::value_type& a) {
-		Container::value_type value{
+    std::transform(std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container::value_type& a) {
+		typename Container::value_type value{
 		(e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
 		(e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1)
 		};
