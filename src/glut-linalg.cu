@@ -78,7 +78,7 @@ public:
     double static _degToRad(double deg);
 
 private:
-    static Matrix mul(const Matrix a, const Matrix b);
+    static Matrix mul(const Matrix& a, const Matrix& b);
     void apply3(Vectors<Container>& transform);
     void apply2(Vectors<Container>& transform);
 
@@ -204,9 +204,10 @@ template<typename Container> std::array<typename Container::value_type::value_ty
 }
 
 template<typename Container> Matrix<Container> Matrix<Container>::identity() {
-	auto m = Matrix<Container>{	T(1),T(0),T(0),
-		T(0),T(1),T(0),
-		T(0),T(0),T(1)
+	auto m = Matrix<Container>{
+		1,0,0,
+		0,1,0,
+		0,0,1
 	};
 	return m;
 }
@@ -226,26 +227,29 @@ template<typename Container> bool Matrix<Container>::isSingular(){
 }
 
 template<typename Container> Matrix<Container> Matrix<Container>::scale(T x, T y) {
-	auto m = Matrix<Container>{	T(x),T(0),T(0),
-		T(0),T(y),T(0),
-		T(0),T(0),T(1)
+	auto m = Matrix<Container>{
+		x,0,0,
+		0,y,0,
+		0,0,1
 	};
 	return m;
 }
 
 template<typename Container> Matrix<Container> Matrix<Container>::rotate(T deg) {
 	T rad = _degToRad(deg);
-	auto m = Matrix<Container>{	T(cos(rad)),T(-sin(rad)),T(0),
-						T(sin(rad)),T(cos(rad)),T(0),
-						T(0),T(0),T(1)
+	auto m = Matrix<Container>{
+		cos(rad),-sin(rad),0,
+		sin(rad),cos(rad),0,
+		0,0,1
 	};
 	return m;
 }
 
 template<typename Container> Matrix<Container> Matrix<Container>::translate(T x, T y) {
-	auto m = Matrix<Container>{	T(1),T(0),T(x),
-		T(0),T(1),T(y),
-		T(0),T(0),T(1)
+	auto m = Matrix<Container>{
+		1,0,x,
+		0,1,y,
+		0,0,1
 	};
 	return m;
 }
@@ -253,8 +257,9 @@ template<typename Container> Matrix<Container> Matrix<Container>::translate(T x,
 template<typename Container>double Matrix<Container>::_radToDeg(double rad) { return rad * (180.0 / M_PI); }//  pi/rad = 180/x, x(pi/rad)=180, x=180/(pi/rad)
 template<typename Container>double Matrix<Container>::_degToRad(double deg) { return deg / (180.0 / M_PI); }
 
-template<typename Container> Matrix<Container> Matrix<Container>::mul(const Matrix<Container> a, const Matrix<Container> b) {
-	auto m = Matrix<Container>{	a.elems[0] * b.elems[0]+a.elems[1] * b.elems[3]+a.elems[2] * b.elems[6],	//c00
+template<typename Container> Matrix<Container> Matrix<Container>::mul(const Matrix<Container>& a, const Matrix<Container>& b) {
+	auto m = Matrix<Container>{
+						a.elems[0] * b.elems[0]+a.elems[1] * b.elems[3]+a.elems[2] * b.elems[6],	//c00
 						a.elems[0] * b.elems[1]+a.elems[1] * b.elems[4]+a.elems[2] * b.elems[7],	//c01
 						a.elems[0] * b.elems[2]+a.elems[1] * b.elems[5]+a.elems[2] * b.elems[8],	//c02
 						a.elems[3] * b.elems[0]+a.elems[4] * b.elems[3]+a.elems[5] * b.elems[6],	//c10
@@ -298,17 +303,17 @@ template<typename Container> void Stack<Container>::identity(){
 }
 
 template<typename Container> void Stack<Container>::scale(T x,T y){
-	if (!(( T(1.0)==x)&&( T(1.0)==y)))
+	if (!(( 1==x)&&( 1==y)))
 		this->push_back( Matrix<Container>::scale(x,y));
 }
 
 template<typename Container> void Stack<Container>::rotate(T deg){
-	if (!(deg== T(0.0) ))
+	if (!(deg== 0 ))
 		this->push_back( Matrix<Container>::rotate(deg));
 }
 
 template<typename Container> void Stack<Container>::translate(T x,T y){
-	if (!(( T(0.0)==x)&&( T(0.0)==y)))
+	if (!(( 0==x)&&( 0==y)))
 		this->push_back( Matrix<Container>::translate(x, y));
 }
 
