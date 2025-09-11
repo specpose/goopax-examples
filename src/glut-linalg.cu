@@ -37,7 +37,7 @@ std::ostream& operator<<(std::ostream& os, const Vector<T, Size>& v)
 template<typename Container>
 class Vectors; // forward declaration! same as in real declaration below
 
-/* Row Major 2D*/
+/* Col Major 2D*/
 template<typename Container>
 class Matrix
 {
@@ -49,7 +49,7 @@ public:
 
     Matrix(const Matrix& other) = default;
     Matrix(Matrix&& other) = default;
-    explicit Matrix(T x1, T x2, T x3, T y1, T y2, T y3, T z1, T z2, T z3);
+    explicit Matrix(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3);
     std::array<T, 9>* data();
 
     Matrix& operator=(const Matrix& other) = default;
@@ -200,18 +200,18 @@ void Vectors<Container>::apply(Stack<Container>& stack)
     });*/
 }
 
-/* Row Major 2D*/
+/* Col Major 2D*/
 template<typename Container>
-Matrix<Container>::Matrix(T x1, T x2, T x3, T y1, T y2, T y3, T z1, T z2, T z3)
+Matrix<Container>::Matrix(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3)
 {
     elems[0] = x1;
-    elems[1] = x2;
-    elems[2] = x3;
-    elems[3] = y1;
+    elems[1] = y1;
+    elems[2] = z1;
+    elems[3] = x2;
     elems[4] = y2;
-    elems[5] = y3;
-    elems[6] = z1;
-    elems[7] = z2;
+    elems[5] = z2;
+    elems[6] = x3;
+    elems[7] = y3;
     elems[8] = z3;
 }
 
@@ -232,8 +232,8 @@ template<typename Container>
 typename Container::value_type::value_type Matrix<Container>::det()
 {
     auto& e = elems;
-    auto det = e[0] * e[4] * e[8] + e[1] * e[5] * e[6] + e[2] * e[3] * e[7] - e[0] * e[5] * e[6] - e[1] * e[3] * e[8]
-               - e[2] * e[4] * e[6];
+    auto det = e[0] * e[4] * e[8] + e[3] * e[7] * e[2] + e[6] * e[1] * e[5] - e[0] * e[7] * e[2] - e[3] * e[1] * e[8]
+               - e[6] * e[4] * e[2];
     return det;
 }
 
@@ -258,14 +258,14 @@ template<typename Container>
 Matrix<Container> Matrix<Container>::rotate(T deg)
 {
     T rad = _degToRad(deg);
-    auto m = Matrix<Container>{ cos(rad), -sin(rad), 0, sin(rad), cos(rad), 0, 0, 0, 1 };
+    auto m = Matrix<Container>{ cos(rad), sin(rad), 0, -sin(rad), cos(rad), 0, 0, 0, 1 };
     return m;
 }
 
 template<typename Container>
 Matrix<Container> Matrix<Container>::translate(T x, T y)
 {
-    auto m = Matrix<Container>{ 1, 0, x, 0, 1, y, 0, 0, 1 };
+    auto m = Matrix<Container>{ 1, 0, 0, 0, 1, 0, x, y, 1 };
     return m;
 }
 
@@ -284,15 +284,15 @@ template<typename Container>
 Matrix<Container> Matrix<Container>::mul(const Matrix<Container>& a, const Matrix<Container>& b)
 {
     auto m = Matrix<Container>{
-        a.elems[0] * b.elems[0] + a.elems[1] * b.elems[3] + a.elems[2] * b.elems[6], // c00
-        a.elems[0] * b.elems[1] + a.elems[1] * b.elems[4] + a.elems[2] * b.elems[7], // c01
-        a.elems[0] * b.elems[2] + a.elems[1] * b.elems[5] + a.elems[2] * b.elems[8], // c02
-        a.elems[3] * b.elems[0] + a.elems[4] * b.elems[3] + a.elems[5] * b.elems[6], // c10
-        a.elems[3] * b.elems[1] + a.elems[4] * b.elems[4] + a.elems[5] * b.elems[7], // c11
-        a.elems[3] * b.elems[2] + a.elems[4] * b.elems[5] + a.elems[5] * b.elems[8], // c12
-        a.elems[6] * b.elems[0] + a.elems[7] * b.elems[3] + a.elems[8] * b.elems[6], // c20
-        a.elems[6] * b.elems[1] + a.elems[7] * b.elems[4] + a.elems[8] * b.elems[7], // c21
-        a.elems[6] * b.elems[2] + a.elems[7] * b.elems[5] + a.elems[8] * b.elems[8]  // c22
+        a.elems[0] * b.elems[0] + a.elems[3] * b.elems[1] + a.elems[6] * b.elems[2], // c00
+        a.elems[0] * b.elems[3] + a.elems[3] * b.elems[4] + a.elems[6] * b.elems[5], // c01
+        a.elems[0] * b.elems[6] + a.elems[3] * b.elems[7] + a.elems[6] * b.elems[8], // c02
+        a.elems[1] * b.elems[0] + a.elems[4] * b.elems[1] + a.elems[7] * b.elems[2], // c10
+        a.elems[1] * b.elems[3] + a.elems[4] * b.elems[4] + a.elems[7] * b.elems[5], // c11
+        a.elems[1] * b.elems[6] + a.elems[4] * b.elems[7] + a.elems[7] * b.elems[8], // c12
+        a.elems[2] * b.elems[0] + a.elems[5] * b.elems[1] + a.elems[8] * b.elems[2], // c20
+        a.elems[2] * b.elems[3] + a.elems[5] * b.elems[4] + a.elems[8] * b.elems[5], // c21
+        a.elems[2] * b.elems[6] + a.elems[5] * b.elems[7] + a.elems[8] * b.elems[8]  // c22
     };
     return m;
 }
