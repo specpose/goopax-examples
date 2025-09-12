@@ -128,8 +128,8 @@ public:
 template<typename T, size_t Size, typename tf>
 Vector<T, Size, tf>::Vector(std::initializer_list<T> list)
 {
-    std::copy(std::begin(list), std::end(list), std::begin(coords));
-    std::fill(std::begin(coords) + list.size(), std::end(coords), 0);
+    auto index = std::copy(std::begin(list), std::end(list), std::begin(coords));
+    std::fill(index, std::end(coords), 0);
 }
 
 // propagating: par
@@ -377,6 +377,8 @@ int main()
     vecs.apply(st);
     // drawVectors(vecs);
     std::for_each(std::begin(vecs), std::end(vecs), [](auto& v) { std::cout << v << ","; });
+
+    auto vec = Vector<int>{ 1 };
 
     return 0;
 }
