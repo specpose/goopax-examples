@@ -3,37 +3,6 @@
 #include <iterator>
 #include <vector>
 
-template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-class Vector
-{
-public:
-    using value_type = T;
-    static const size_t SIZE = Size;
-
-    Vector(std::initializer_list<T> list);
-
-    std::array<T, Size> coords;
-};
-
-template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-Vector<T, Size> operator+(const Vector<T, Size, tf>& a, const Vector<T, Size, tf>& b)
-{
-    auto c = Vector<T, Size, tf>{};
-    for (int i = 0; i < Size; ++i)
-        c.coords[i] = a.coords[i] + b.coords[i];
-    return c;
-}
-
-template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-std::ostream& operator<<(std::ostream& os, const Vector<T, Size>& v)
-{
-    os << "(";
-    for (int i = 0; i < Size; ++i)
-        os << v.coords[i] << ",";
-    os << ")" << std::endl;
-    return os;
-}
-
 template<typename Container>
 class Vectors; // forward declaration! same as in real declaration below
 
@@ -41,10 +10,10 @@ class Vectors; // forward declaration! same as in real declaration below
 template<typename T>
 class Matrix
 {
-public:
     template<typename Container>
     friend class Vectors;
 
+public:
     Matrix(const Matrix& other) = default;
     Matrix(Matrix&& other) = default;
     explicit Matrix(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3);
@@ -62,7 +31,6 @@ public:
 
     static Matrix identity();
 
-    // MSVC: function return type (and signature) is read before alias definition
     T det();
 
     bool isSingular();
@@ -125,14 +93,6 @@ public:
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-template<typename T, size_t Size, typename tf>
-Vector<T, Size, tf>::Vector(std::initializer_list<T> list)
-{
-    auto index = std::copy(std::begin(list), std::end(list), std::begin(coords));
-    std::fill(index, std::end(coords), 0);
-}
-
-// propagating: par
 template<typename Container>
 template<typename T>
 void Vectors<Container>::apply(Stack<T>& stack)
@@ -241,7 +201,7 @@ template<typename T>
 double Matrix<T>::_radToDeg(double rad)
 {
     return rad * (180.0 / M_PI);
-} //  pi/rad = 180/x, x(pi/rad)=180, x=180/(pi/rad)
+}
 template<typename T>
 double Matrix<T>::_degToRad(double deg)
 {
@@ -265,8 +225,6 @@ Matrix<T> Matrix<T>::mul(const Matrix<T>& a, const Matrix<T>& b)
     return m;
 }
 
-// this may have to be compiled with a different compiler: NOT HEADER ONLY
-// readonly: par_unseq
 template<typename T>
 template<typename Container2>
 void Matrix<T>::apply3(Vectors<Container2>& transform)
@@ -275,8 +233,8 @@ void Matrix<T>::apply3(Vectors<Container2>& transform)
     std::transform(
         std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container2::value_type& a) {
             typename Container2::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
-                                                  (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
-                                                  (e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2]) };
+                                                   (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
+                                                   (e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2]) };
             return value;
         });
 }
@@ -288,7 +246,7 @@ void Matrix<T>::apply2(Vectors<Container2>& transform)
     std::transform(
         std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container2::value_type& a) {
             typename Container2::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
-                                                  (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1) };
+                                                   (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1) };
             return value;
         });
 }
@@ -322,6 +280,41 @@ void Stack<T>::translate(T x, T y)
 {
     if (!((0 == x) && (0 == y)))
         this->push_back(Matrix<T>::translate(x, y));
+}
+
+template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
+class Vector
+{
+public:
+    using value_type = T;
+    static const size_t SIZE = Size;
+
+    Vector(std::initializer_list<T> list)
+    {
+        auto index = std::copy(std::begin(list), std::end(list), std::begin(coords));
+        std::fill(index, std::end(coords), 0);
+    }
+
+    std::array<T, Size> coords;
+};
+
+template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
+Vector<T, Size> operator+(const Vector<T, Size, tf>& a, const Vector<T, Size, tf>& b)
+{
+    auto c = Vector<T, Size, tf>{};
+    for (int i = 0; i < Size; ++i)
+        c.coords[i] = a.coords[i] + b.coords[i];
+    return c;
+}
+
+template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
+std::ostream& operator<<(std::ostream& os, const Vector<T, Size>& v)
+{
+    os << "(";
+    for (int i = 0; i < Size; ++i)
+        os << v.coords[i] << ",";
+    os << ")" << std::endl;
+    return os;
 }
 
 int main()
