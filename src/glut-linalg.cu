@@ -38,14 +38,12 @@ template<typename Container>
 class Vectors; // forward declaration! same as in real declaration below
 
 /* Col Major 2D*/
-template<typename Container>
+template<typename T>
 class Matrix
 {
 public:
-    using T = typename Container::value_type::value_type;
-
-    friend class Matrix;
-    friend class Vectors<Container>;
+    template<typename Container>
+    friend class Vectors;
 
     Matrix(const Matrix& other) = default;
     Matrix(Matrix&& other) = default;
@@ -65,7 +63,7 @@ public:
     static Matrix identity();
 
     // MSVC: function return type (and signature) is read before alias definition
-    typename Container::value_type::value_type det();
+    T det();
 
     bool isSingular();
 
@@ -79,21 +77,20 @@ public:
 
 private:
     static Matrix mul(const Matrix& a, const Matrix& b);
-    void apply3(Vectors<Container>& transform);
-    void apply2(Vectors<Container>& transform);
+    template<typename Container2>
+    void apply3(Vectors<Container2>& transform);
+    template<typename Container2>
+    void apply2(Vectors<Container2>& transform);
 
 private:
     std::array<T, 9> elems;
 };
 
-// todo disable type conversions here?
-template<typename Container>
-class Stack : public std::vector<Matrix<Container>>
+template<typename T>
+class Stack : public std::vector<Matrix<T>>
 {
 
 public:
-    using T = typename Container::value_type::value_type;
-
     Stack();
 
     void identity();
@@ -102,19 +99,14 @@ public:
     void translate(T x, T y);
 };
 
-template<typename Container> // same as in forward declaration above!
-class Vectors : public Container
+template<typename Container>
+class Vectors : public Container // same as in forward declaration above!
 {
 public:
     using Container::Container;
-    Vectors();
-    Vectors(const Container& other);
-    Vectors(Container&& other);
-    Vectors& operator=(Container&& other);
 
-    using T = typename Container::value_type::value_type;
-
-    void apply(Stack<Container>& stack);
+    template<typename T>
+    void apply(Stack<T>& stack);
 
     /*const T* _to_C_array(){
         if (this->size()>0)
@@ -140,52 +132,28 @@ Vector<T, Size, tf>::Vector(std::initializer_list<T> list)
     std::fill(std::begin(coords) + list.size(), std::end(coords), 0);
 }
 
-template<typename Container>
-Vectors<Container>::Vectors()
-    : Container()
-{
-}
-
-template<typename Container>
-Vectors<Container>::Vectors(const Container& other)
-    : Container(other)
-{
-}
-
-template<typename Container>
-Vectors<Container>::Vectors(Container&& other)
-    : Container{ std::move(other) }
-{
-}
-
-template<typename Container>
-Vectors<Container>& Vectors<Container>::operator=(Container&& other)
-{
-    Container::operator=(std::move(other));
-    return *this;
-}
-
 // propagating: par
 template<typename Container>
-void Vectors<Container>::apply(Stack<Container>& stack)
+template<typename T>
+void Vectors<Container>::apply(Stack<T>& stack)
 {
-    auto first = std::find_if(std::begin(stack), std::end(stack), [](Matrix<Container>& m) { return !m.isSingular(); });
+    auto first = std::find_if(std::begin(stack), std::end(stack), [](Matrix<T>& m) { return !m.isSingular(); });
     if (first != std::end(stack))
     {
 #if DEVELOPMENT
-        if (*first == Matrix<Container>::identity())
+        if (*first == Matrix<T>::identity())
             throw std::logic_error(
                 "multiplying identity matrix has performance penalty. Check before adding to stack.");
 #endif
-        Matrix<Container> all = *first;
-        std::for_each(++first, std::end(stack), [&all](Matrix<Container>& m) {
+        Matrix<T> all = *first;
+        std::for_each(++first, std::end(stack), [&all](Matrix<T>& m) {
 #if DEVELOPMENT
-            if (m == Matrix<Container>::identity())
+            if (m == Matrix<T>::identity())
                 throw std::logic_error(
                     "multiplying identity matrix has performance penalty. Check before adding to stack.");
 #endif
             if (!m.isSingular())
-                all = Matrix<Container>::mul(all, m);
+                all = Matrix<T>::mul(all, m);
         });
         static const size_t size = Container::value_type::SIZE;
         if (size < 2)
@@ -195,14 +163,14 @@ void Vectors<Container>::apply(Stack<Container>& stack)
         else
             all.apply3(*this);
     }
-    /*std::for_each(std::rbegin(stack), std::rend(stack), [&this](Matrix<Container>& m) {
-        m.apply(*this);
-    });*/
+    // std::for_each(std::rbegin(stack), std::rend(stack), [&this](Matrix<T>& m) {
+    //    m.apply(*this);
+    //});
 }
 
 /* Col Major 2D*/
-template<typename Container>
-Matrix<Container>::Matrix(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3)
+template<typename T>
+Matrix<T>::Matrix(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3)
 {
     elems[0] = x1;
     elems[1] = y1;
@@ -215,21 +183,21 @@ Matrix<Container>::Matrix(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3)
     elems[8] = z3;
 }
 
-template<typename Container>
-std::array<typename Container::value_type::value_type, 9>* Matrix<Container>::data()
+template<typename T>
+std::array<T, 9>* Matrix<T>::data()
 {
     return &elems;
 }
 
-template<typename Container>
-Matrix<Container> Matrix<Container>::identity()
+template<typename T>
+Matrix<T> Matrix<T>::identity()
 {
-    auto m = Matrix<Container>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+    auto m = Matrix<T>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 };
     return m;
 }
 
-template<typename Container>
-typename Container::value_type::value_type Matrix<Container>::det()
+template<typename T>
+T Matrix<T>::det()
 {
     auto& e = elems;
     auto det = e[0] * e[4] * e[8] + e[3] * e[7] * e[2] + e[6] * e[1] * e[5] - e[0] * e[7] * e[2] - e[3] * e[1] * e[8]
@@ -237,8 +205,8 @@ typename Container::value_type::value_type Matrix<Container>::det()
     return det;
 }
 
-template<typename Container>
-bool Matrix<Container>::isSingular()
+template<typename T>
+bool Matrix<T>::isSingular()
 {
 #if DEVELOPMENT
     return (det() == 0);
@@ -247,43 +215,43 @@ bool Matrix<Container>::isSingular()
 #endif
 }
 
-template<typename Container>
-Matrix<Container> Matrix<Container>::scale(T x, T y)
+template<typename T>
+Matrix<T> Matrix<T>::scale(T x, T y)
 {
-    auto m = Matrix<Container>{ x, 0, 0, 0, y, 0, 0, 0, 1 };
+    auto m = Matrix<T>{ x, 0, 0, 0, y, 0, 0, 0, 1 };
     return m;
 }
 
-template<typename Container>
-Matrix<Container> Matrix<Container>::rotate(T deg)
+template<typename T>
+Matrix<T> Matrix<T>::rotate(T deg)
 {
     T rad = _degToRad(deg);
-    auto m = Matrix<Container>{ cos(rad), sin(rad), 0, -sin(rad), cos(rad), 0, 0, 0, 1 };
+    auto m = Matrix<T>{ cos(rad), sin(rad), 0, -sin(rad), cos(rad), 0, 0, 0, 1 };
     return m;
 }
 
-template<typename Container>
-Matrix<Container> Matrix<Container>::translate(T x, T y)
+template<typename T>
+Matrix<T> Matrix<T>::translate(T x, T y)
 {
-    auto m = Matrix<Container>{ 1, 0, 0, 0, 1, 0, x, y, 1 };
+    auto m = Matrix<T>{ 1, 0, 0, 0, 1, 0, x, y, 1 };
     return m;
 }
 
-template<typename Container>
-double Matrix<Container>::_radToDeg(double rad)
+template<typename T>
+double Matrix<T>::_radToDeg(double rad)
 {
     return rad * (180.0 / M_PI);
 } //  pi/rad = 180/x, x(pi/rad)=180, x=180/(pi/rad)
-template<typename Container>
-double Matrix<Container>::_degToRad(double deg)
+template<typename T>
+double Matrix<T>::_degToRad(double deg)
 {
     return deg / (180.0 / M_PI);
 }
 
-template<typename Container>
-Matrix<Container> Matrix<Container>::mul(const Matrix<Container>& a, const Matrix<Container>& b)
+template<typename T>
+Matrix<T> Matrix<T>::mul(const Matrix<T>& a, const Matrix<T>& b)
 {
-    auto m = Matrix<Container>{
+    auto m = Matrix<T>{
         a.elems[0] * b.elems[0] + a.elems[3] * b.elems[1] + a.elems[6] * b.elems[2], // c00
         a.elems[0] * b.elems[3] + a.elems[3] * b.elems[4] + a.elems[6] * b.elems[5], // c01
         a.elems[0] * b.elems[6] + a.elems[3] * b.elems[7] + a.elems[6] * b.elems[8], // c02
@@ -299,70 +267,72 @@ Matrix<Container> Matrix<Container>::mul(const Matrix<Container>& a, const Matri
 
 // this may have to be compiled with a different compiler: NOT HEADER ONLY
 // readonly: par_unseq
-template<typename Container>
-void Matrix<Container>::apply3(Vectors<Container>& transform)
+template<typename T>
+template<typename Container2>
+void Matrix<T>::apply3(Vectors<Container2>& transform)
 {
     auto& e = elems;
     std::transform(
-        std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container::value_type& a) {
-            typename Container::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
+        std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container2::value_type& a) {
+            typename Container2::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
                                                   (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
                                                   (e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2]) };
             return value;
         });
 }
-template<typename Container>
-void Matrix<Container>::apply2(Vectors<Container>& transform)
+template<typename T>
+template<typename Container2>
+void Matrix<T>::apply2(Vectors<Container2>& transform)
 {
     auto& e = elems;
     std::transform(
-        std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container::value_type& a) {
-            typename Container::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
+        std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container2::value_type& a) {
+            typename Container2::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
                                                   (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1) };
             return value;
         });
 }
 
-template<typename Container>
-Stack<Container>::Stack()
-    : std::vector<Matrix<Container>>(){};
+template<typename T>
+Stack<T>::Stack()
+    : std::vector<Matrix<T>>(){};
 
-template<typename Container>
-void Stack<Container>::identity()
+template<typename T>
+void Stack<T>::identity()
 {
     this->clear();
 }
 
-template<typename Container>
-void Stack<Container>::scale(T x, T y)
+template<typename T>
+void Stack<T>::scale(T x, T y)
 {
     if (!((1 == x) && (1 == y)))
-        this->push_back(Matrix<Container>::scale(x, y));
+        this->push_back(Matrix<T>::scale(x, y));
 }
 
-template<typename Container>
-void Stack<Container>::rotate(T deg)
+template<typename T>
+void Stack<T>::rotate(T deg)
 {
     if (!(deg == 0))
-        this->push_back(Matrix<Container>::rotate(deg));
+        this->push_back(Matrix<T>::rotate(deg));
 }
 
-template<typename Container>
-void Stack<Container>::translate(T x, T y)
+template<typename T>
+void Stack<T>::translate(T x, T y)
 {
     if (!((0 == x) && (0 == y)))
-        this->push_back(Matrix<Container>::translate(x, y));
+        this->push_back(Matrix<T>::translate(x, y));
 }
 
 int main()
 {
     using T = double;
-    using C = typename std::vector<Vector<T>>;
-    auto st = Stack<C>();
+    using C1 = typename std::vector<Vector<T>>;
+    auto st = Stack<T>();
     st.identity();
     // st.scale(2, 2);
 
-    auto sq = Vectors<C>();
+    auto sq = Vectors<C1>();
     T square = 0.5;
     sq.push_back({ square, square });
     sq.push_back({ -square, square });
@@ -373,10 +343,10 @@ int main()
     // drawVectors(sq);
     // std::for_each(std::begin(sq), std::end(sq), [](auto& v) { std::cout << v << ","; });
 
-    C::value_type v1 = { 1, 0 };
-    C::value_type v2 = { sqrt(2) / 2, sqrt(2) / 2 };
-    C::value_type v3 = { 0, 1 };
-    auto _data_sink = C({ v1, v1 + v2, v1 + v2 + v3 });
+    C1::value_type v1 = { 1, 0 };
+    C1::value_type v2 = { sqrt(2) / 2, sqrt(2) / 2 };
+    C1::value_type v3 = { 0, 1 };
+    auto _data_sink = C1({ v1, v1 + v2, v1 + v2 + v3 });
 
     // auto last_pair = _data_sink.back();//multiple tracks
     auto last_pair = _data_sink;
@@ -385,20 +355,20 @@ int main()
     auto middle1 = _data_sink[0];
     auto middle2 = _data_sink[1];
     double angle2 =
-        Matrix<C>::_radToDeg(atan2((middle2.coords[0] - middle1.coords[1]), (middle2.coords[0] - middle1.coords[1])));
+        Matrix<T>::_radToDeg(atan2((middle2.coords[0] - middle1.coords[1]), (middle2.coords[0] - middle1.coords[1])));
     // glRotatef(-angle2, 0.0f, 0.0f, 1.0f);
     st.rotate(-angle2);
     st.translate(-middle1.coords[0], -middle1.coords[1]);
 
     // middle marker
-    Vectors<C> mid = Vectors<C>();
+    Vectors<C1> mid = Vectors<C1>();
     mid.push_back({ middle1.coords[0], middle1.coords[1] });
     mid.push_back({ middle2.coords[0], middle2.coords[1] });
     mid.apply(st);
     // drawVectors(mid);
     // std::for_each(std::begin(mid), std::end(mid), [](auto& v) { std::cout << v << ","; });
 
-    Vectors<C> vecs = Vectors<C>();
+    Vectors<C1> vecs = Vectors<C1>();
     vecs.push_back({ 0, 0 });
     for (int i = 0; i < left.size(); i++)
     {
