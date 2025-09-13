@@ -45,10 +45,6 @@ public:
 
 private:
     static Matrix mul(const Matrix& a, const Matrix& b);
-    template<typename Container2>
-    void apply3(Vectors<Container2>& transform);
-    template<typename Container2>
-    void apply2(Vectors<Container2>& transform);
 
 private:
     std::array<T, 9> elems;
@@ -75,6 +71,10 @@ public:
 
     template<typename T>
     void apply(Stack<T>& stack);
+    template<typename T>
+    void apply3(Matrix<T>& matrix);
+    template<typename T>
+    void apply2(Matrix<T>& matrix);
 
     /*const T* _to_C_array(){
         if (this->size()>0)
@@ -119,13 +119,37 @@ void Vectors<Container>::apply(Stack<T>& stack)
         if (size < 2)
             throw std::logic_error("Matrix class does not work with vector dimensions lower than 2");
         else if (size == 2)
-            all.apply2(*this);
+            apply2(all);
         else
-            all.apply3(*this);
+            apply3(all);
     }
     // std::for_each(std::rbegin(stack), std::rend(stack), [&this](Matrix<T>& m) {
     //    m.apply(*this);
     //});
+}
+
+template<typename Container>
+template<typename T>
+void Vectors<Container>::apply3(Matrix<T>& matrix)
+{
+    auto& e = matrix.elems;
+    std::transform(std::begin(*this), std::end(*this), std::begin(*this), [&e](typename Container::value_type& a) {
+        typename Container::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
+                                              (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
+                                              (e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2]) };
+        return value;
+    });
+}
+template<typename Container>
+template<typename T>
+void Vectors<Container>::apply2(Matrix<T>& matrix)
+{
+    auto& e = matrix.elems;
+    std::transform(std::begin(*this), std::end(*this), std::begin(*this), [&e](typename Container::value_type& a) {
+        typename Container::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
+                                              (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1) };
+        return value;
+    });
 }
 
 /* Col Major 2D*/
@@ -223,32 +247,6 @@ Matrix<T> Matrix<T>::mul(const Matrix<T>& a, const Matrix<T>& b)
         a.elems[2] * b.elems[6] + a.elems[5] * b.elems[7] + a.elems[8] * b.elems[8]  // c22
     };
     return m;
-}
-
-template<typename T>
-template<typename Container2>
-void Matrix<T>::apply3(Vectors<Container2>& transform)
-{
-    auto& e = elems;
-    std::transform(
-        std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container2::value_type& a) {
-            typename Container2::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
-                                                   (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
-                                                   (e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2]) };
-            return value;
-        });
-}
-template<typename T>
-template<typename Container2>
-void Matrix<T>::apply2(Vectors<Container2>& transform)
-{
-    auto& e = elems;
-    std::transform(
-        std::begin(transform), std::end(transform), std::begin(transform), [&e](typename Container2::value_type& a) {
-            typename Container2::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
-                                                   (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1) };
-            return value;
-        });
 }
 
 template<typename T>
