@@ -3,14 +3,14 @@
 #include <iterator>
 #include <vector>
 
-template<typename gpu_T, std::size_t SIZE = 2>
+template<typename pod_T, std::size_t SIZE = 2>
 class Vectors; // forward declaration! same as in real declaration below
 
 /* Col Major 2D*/
 template<typename T>
 class Matrix
 {
-    template<typename gpu_T, std::size_t SIZE>
+    template<typename pod_T, std::size_t SIZE>
     friend class Vectors;
 
 public:
@@ -63,11 +63,11 @@ public:
     void translate(T x, T y);
 };
 
-template<typename gpu_T, std::size_t SIZE>
+template<typename pod_T, std::size_t SIZE>
 class Vectors // same as in forward declaration above!
 {
 public:
-    Vectors(gpu_T* ptr, std::size_t size)
+    Vectors(pod_T* ptr, std::size_t size)
         : _size(size)
         , storage(ptr)
     {
@@ -83,7 +83,7 @@ public:
     template<typename T>
     void apply2(Matrix<T>& matrix);
 
-    gpu_T& operator[](std::size_t i)
+    pod_T& operator[](std::size_t i)
     {
         return storage[i];
     }
@@ -93,7 +93,7 @@ public:
     }
 
 private:
-    gpu_T* storage;
+    pod_T* storage;
     std::size_t _size;
 };
 
@@ -106,27 +106,29 @@ private:
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-template<typename gpu_T, std::size_t SIZE>
+template<typename pod_T, std::size_t SIZE>
 template<typename T>
-void Vectors<gpu_T, SIZE>::apply(Stack<T>& stack)
+void Vectors<pod_T, SIZE>::apply(Stack<T>& stack)
 {
-    auto first = std::find_if(std::begin(stack), std::end(stack), [](Matrix<T>& m) { return !m.isSingular(); });
+    auto first = std::begin(stack);
     if (first != std::end(stack))
     {
 #if DEVELOPMENT
         if (*first == Matrix<T>::identity())
-            throw std::logic_error(
-                "multiplying identity matrix has performance penalty. Check before adding to stack.");
+            throw std::logic_error("multiplying identity matrix has performance penalty.");
+        if (first.isSingular())
+            throw std::logic_error("singular matrices are not invertible.");
 #endif
         Matrix<T> all = *first;
         std::for_each(++first, std::end(stack), [&all](Matrix<T>& m) {
 #if DEVELOPMENT
             if (m == Matrix<T>::identity())
-                throw std::logic_error(
-                    "multiplying identity matrix has performance penalty. Check before adding to stack.");
+                throw std::logic_error("multiplying identity matrix has performance penalty.");
+            if (m.isSingular())
+                throw std::logic_error("singular matrices are not invertible.");
+#else
+            all = Matrix<T>::mul(all, m);
 #endif
-            if (!m.isSingular())
-                all = Matrix<T>::mul(all, m);
         });
         if (SIZE < 2)
             throw std::logic_error("Matrix class does not work with vector dimensions lower than 2");
@@ -137,25 +139,25 @@ void Vectors<gpu_T, SIZE>::apply(Stack<T>& stack)
     }
 }
 
-template<typename gpu_T, std::size_t SIZE>
+template<typename pod_T, std::size_t SIZE>
 template<typename T>
-void Vectors<gpu_T, SIZE>::apply3(Matrix<T>& matrix)
+void Vectors<pod_T, SIZE>::apply3(Matrix<T>& matrix)
 {
     auto& e = matrix.elems;
-    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&e](gpu_T& a) {
-        gpu_T value{ (e[0] * a[0] + e[1] * a[1] + e[2] * a[2]),
+    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&e](pod_T& a) {
+        pod_T value{ (e[0] * a[0] + e[1] * a[1] + e[2] * a[2]),
                      (e[3] * a[0] + e[4] * a[1] + e[5] * a[2]),
                      (e[6] * a[0] + e[7] * a[1] + e[8] * a[2]) };
         return value;
     });
 }
-template<typename gpu_T, std::size_t SIZE>
+template<typename pod_T, std::size_t SIZE>
 template<typename T>
-void Vectors<gpu_T, SIZE>::apply2(Matrix<T>& matrix)
+void Vectors<pod_T, SIZE>::apply2(Matrix<T>& matrix)
 {
     auto& e = matrix.elems;
-    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&e](gpu_T& a) {
-        gpu_T value{ (e[0] * a[0] + e[1] * a[1] + e[2] * 1), (e[3] * a[0] + e[4] * a[1] + e[5] * 1) };
+    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&e](pod_T& a) {
+        pod_T value{ (e[0] * a[0] + e[1] * a[1] + e[2] * 1), (e[3] * a[0] + e[4] * a[1] + e[5] * 1) };
         return value;
     });
 }
