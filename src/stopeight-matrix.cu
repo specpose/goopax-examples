@@ -67,16 +67,13 @@ template<typename gpu_T, std::size_t SIZE>
 class Vectors // same as in forward declaration above!
 {
 public:
-    Vectors(std::size_t size)
+    Vectors(gpu_T* ptr, std::size_t size)
         : _size(size)
-        , storage(NULL)
+        , storage(ptr)
     {
-        storage = (gpu_T*)malloc(_size * sizeof(gpu_T));
     }
-    ~Vectors()
+    virtual ~Vectors()
     {
-        // if (!storage == NULL)
-        //    free((void*)storage);
     }
 
     template<typename T>
@@ -294,6 +291,10 @@ void Stack<T>::translate(T x, T y)
 template<typename T>
 struct Vector
 {
+    Vector()
+    {
+        std::fill(&vec[0], &vec[0] + _size, 0);
+    }
     Vector(std::initializer_list<T> list)
     {
         auto index = std::copy(std::begin(list), std::end(list), &vec[0]);
@@ -327,26 +328,38 @@ std::ostream& operator<<(std::ostream& os, const Vector<T>& v)
 int main()
 {
     using T = double;
+    using D = std::vector<Vector<T>>;
     using C1 = Vectors<Vector<T>>;
+    using C2 = Vectors<Vector<T>>;
+    using C3 = Vectors<Vector<T>>;
     auto st = Stack<T>();
     st.identity();
     // st.scale(2, 2);
 
-    auto sq = C1(5);
+    auto sq = D(5);
     T square = 0.5;
     sq[0] = Vector<T>{ square, square };
     sq[1] = Vector<T>{ -square, square };
     sq[2] = Vector<T>{ -square, -square };
     sq[3] = Vector<T>{ square, -square };
     sq[4] = Vector<T>{ square, square };
-    sq.apply(st);
+    auto sq_copy = sq;
+    auto sq_1 = C1(sq_copy.data(), std::size(sq_copy));
+    sq_1.apply(st);
+    sq_copy = sq;
+    auto sq_2 = C2(sq_copy.data(), std::size(sq_copy));
+    sq_2.apply(st);
+    sq_copy = sq;
+    auto sq_3 = C3(sq_copy.data(), std::size(sq_copy));
+    sq_3.apply(st);
     // drawVectors(sq);
-    // std::for_each(std::begin(sq), std::end(sq), [](auto& v) { std::cout << v << ","; });
+    std::for_each(&sq_3[0], &sq_3[0] + sq_3.size(), [](auto& v) { std::cout << v << ","; });
+    std::cout << std::endl;
 
     auto v1 = Vector<T>{ 1, 0 };
     auto v2 = Vector<T>{ sqrt(2) / 2, sqrt(2) / 2 };
     auto v3 = Vector<T>{ 0, 1 };
-    auto _data_sink = C1(3);
+    auto _data_sink = D(3);
     _data_sink[0] = v1;
     _data_sink[1] = v1 + v2;
     _data_sink[2] = v1 + v2 + v3;
@@ -363,22 +376,46 @@ int main()
     st.translate(-middle1[0], -middle1[1]);
 
     // middle marker
-    auto mid = C1(2);
+    auto mid = D(2);
     mid[0] = Vector<T>{ middle1[0], middle1[1] };
     mid[1] = Vector<T>{ middle2[0], middle2[1] };
-    mid.apply(st);
+    auto mid_copy = mid;
+    auto mid_1 = C1(mid_copy.data(), std::size(mid_copy));
+    mid_1.apply(st);
+    mid_copy = mid;
+    auto mid_2 = C1(mid_copy.data(), std::size(mid_copy));
+    mid_2.apply(st);
+    mid_copy = mid;
+    auto mid_3 = C1(mid_copy.data(), std::size(mid_copy));
+    mid_3.apply(st);
     // drawVectors(mid);
-    // std::for_each(std::begin(mid), std::end(mid), [](auto& v) { std::cout << v << ","; });
+    std::for_each(&mid_3[0], &mid_3[0] + mid_3.size(), [](auto& v) { std::cout << v << ","; });
+    std::cout << std::endl;
 
-    auto vecs = C1(left.size() + 1);
+    auto vecs = D(left.size() + 1);
     vecs[0] = Vector<T>{ 0, 0 };
-    for (int i = 1; i <= vecs.size(); i++)
+    for (int i = 1; i < vecs.size(); i++)
     {
         vecs[i] = Vector<T>{ left[i - 1][0], left[i - 1][1] };
     }
-    vecs.apply(st);
+    auto vecs_copy = vecs;
+    auto vecs_1 = C1(vecs_copy.data(), std::size(vecs_copy));
+    vecs_1.apply(st);
+    vecs_copy = vecs;
+    auto vecs_2 = C1(vecs_copy.data(), std::size(vecs_copy));
+    vecs_2.apply(st);
+    vecs_copy = vecs;
+    auto vecs_3 = C1(vecs_copy.data(), std::size(vecs_copy));
+    vecs_3.apply(st);
     // drawVectors(vecs);
-    std::for_each(&vecs[0], &vecs[0] + vecs.size(), [](auto& v) { std::cout << v << ","; });
+    std::for_each(&vecs_3[0], &vecs_3[0] + vecs_3.size(), [](auto& v) { std::cout << v << ","; });
+    std::cout << std::endl;
+
+#ifdef __CUDACC__
+    std::cout << "Hello from CUDA!" << std::endl;
+#else
+    std::cout << "CUDA is not here." << std::endl;
+#endif
 
     return 0;
 }
