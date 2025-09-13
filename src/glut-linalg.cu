@@ -3,14 +3,14 @@
 #include <iterator>
 #include <vector>
 
-template<typename Container>
+template<typename gpu_T, std::size_t SIZE = 2>
 class Vectors; // forward declaration! same as in real declaration below
 
 /* Col Major 2D*/
 template<typename T>
 class Matrix
 {
-    template<typename Container>
+    template<typename gpu_T, std::size_t SIZE>
     friend class Vectors;
 
 public:
@@ -63,11 +63,21 @@ public:
     void translate(T x, T y);
 };
 
-template<typename Container>
-class Vectors : public Container // same as in forward declaration above!
+template<typename gpu_T, std::size_t SIZE>
+class Vectors // same as in forward declaration above!
 {
 public:
-    using Container::Container;
+    Vectors(std::size_t size)
+        : _size(size)
+        , storage(NULL)
+    {
+        storage = (gpu_T*)malloc(_size * sizeof(gpu_T));
+    }
+    ~Vectors()
+    {
+        // if (!storage == NULL)
+        //    free((void*)storage);
+    }
 
     template<typename T>
     void apply(Stack<T>& stack);
@@ -76,12 +86,18 @@ public:
     template<typename T>
     void apply2(Matrix<T>& matrix);
 
-    /*const T* _to_C_array(){
-        if (this->size()>0)
-            return &(this->at(0))[0];
-        else
-            return nullptr;
-    }*/
+    gpu_T& operator[](std::size_t i)
+    {
+        return storage[i];
+    }
+    std::size_t size()
+    {
+        return _size;
+    }
+
+private:
+    gpu_T* storage;
+    std::size_t _size;
 };
 
 #include <algorithm>
@@ -93,9 +109,9 @@ public:
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-template<typename Container>
+template<typename gpu_T, std::size_t SIZE>
 template<typename T>
-void Vectors<Container>::apply(Stack<T>& stack)
+void Vectors<gpu_T, SIZE>::apply(Stack<T>& stack)
 {
     auto first = std::find_if(std::begin(stack), std::end(stack), [](Matrix<T>& m) { return !m.isSingular(); });
     if (first != std::end(stack))
@@ -115,39 +131,34 @@ void Vectors<Container>::apply(Stack<T>& stack)
             if (!m.isSingular())
                 all = Matrix<T>::mul(all, m);
         });
-        static const size_t size = Container::value_type::SIZE;
-        if (size < 2)
+        if (SIZE < 2)
             throw std::logic_error("Matrix class does not work with vector dimensions lower than 2");
-        else if (size == 2)
+        else if (SIZE == 2)
             apply2(all);
         else
             apply3(all);
     }
-    // std::for_each(std::rbegin(stack), std::rend(stack), [&this](Matrix<T>& m) {
-    //    m.apply(*this);
-    //});
 }
 
-template<typename Container>
+template<typename gpu_T, std::size_t SIZE>
 template<typename T>
-void Vectors<Container>::apply3(Matrix<T>& matrix)
+void Vectors<gpu_T, SIZE>::apply3(Matrix<T>& matrix)
 {
     auto& e = matrix.elems;
-    std::transform(std::begin(*this), std::end(*this), std::begin(*this), [&e](typename Container::value_type& a) {
-        typename Container::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * a.coords[2]),
-                                              (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * a.coords[2]),
-                                              (e[6] * a.coords[0] + e[7] * a.coords[1] + e[8] * a.coords[2]) };
+    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&e](gpu_T& a) {
+        gpu_T value{ (e[0] * a[0] + e[1] * a[1] + e[2] * a[2]),
+                     (e[3] * a[0] + e[4] * a[1] + e[5] * a[2]),
+                     (e[6] * a[0] + e[7] * a[1] + e[8] * a[2]) };
         return value;
     });
 }
-template<typename Container>
+template<typename gpu_T, std::size_t SIZE>
 template<typename T>
-void Vectors<Container>::apply2(Matrix<T>& matrix)
+void Vectors<gpu_T, SIZE>::apply2(Matrix<T>& matrix)
 {
     auto& e = matrix.elems;
-    std::transform(std::begin(*this), std::end(*this), std::begin(*this), [&e](typename Container::value_type& a) {
-        typename Container::value_type value{ (e[0] * a.coords[0] + e[1] * a.coords[1] + e[2] * 1),
-                                              (e[3] * a.coords[0] + e[4] * a.coords[1] + e[5] * 1) };
+    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&e](gpu_T& a) {
+        gpu_T value{ (e[0] * a[0] + e[1] * a[1] + e[2] * 1), (e[3] * a[0] + e[4] * a[1] + e[5] * 1) };
         return value;
     });
 }
@@ -280,37 +291,35 @@ void Stack<T>::translate(T x, T y)
         this->push_back(Matrix<T>::translate(x, y));
 }
 
-template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-class Vector
+template<typename T>
+struct Vector
 {
-public:
-    using value_type = T;
-    static const size_t SIZE = Size;
-
     Vector(std::initializer_list<T> list)
     {
-        auto index = std::copy(std::begin(list), std::end(list), std::begin(coords));
-        std::fill(index, std::end(coords), 0);
+        auto index = std::copy(std::begin(list), std::end(list), &vec[0]);
+        std::fill(index, &vec[0] + _size, 0);
     }
-
-    std::array<T, Size> coords;
+    T& operator[](std::size_t i)
+    {
+        return vec[i];
+    }
+    static const std::size_t _size = 2;
+    T vec[_size];
 };
-
-template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-Vector<T, Size> operator+(const Vector<T, Size, tf>& a, const Vector<T, Size, tf>& b)
+template<typename T>
+Vector<T> operator+(const Vector<T>& a, const Vector<T>& b)
 {
-    auto c = Vector<T, Size, tf>{};
-    for (int i = 0; i < Size; ++i)
-        c.coords[i] = a.coords[i] + b.coords[i];
+    auto c = Vector<T>{};
+    c.vec[0] = a.vec[0] + b.vec[0];
+    c.vec[1] = a.vec[1] + b.vec[1];
     return c;
-}
-
-template<typename T, size_t Size = 2, typename tf = typename std::enable_if_t<std::is_arithmetic<T>::value>>
-std::ostream& operator<<(std::ostream& os, const Vector<T, Size>& v)
+};
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const Vector<T>& v)
 {
     os << "(";
-    for (int i = 0; i < Size; ++i)
-        os << v.coords[i] << ",";
+    os << v.vec[0] << ",";
+    os << v.vec[1];
     os << ")" << std::endl;
     return os;
 }
@@ -318,26 +327,29 @@ std::ostream& operator<<(std::ostream& os, const Vector<T, Size>& v)
 int main()
 {
     using T = double;
-    using C1 = typename std::vector<Vector<T>>;
+    using C1 = Vectors<Vector<T>>;
     auto st = Stack<T>();
     st.identity();
     // st.scale(2, 2);
 
-    auto sq = Vectors<C1>();
+    auto sq = C1(5);
     T square = 0.5;
-    sq.push_back({ square, square });
-    sq.push_back({ -square, square });
-    sq.push_back({ -square, -square });
-    sq.push_back({ square, -square });
-    sq.push_back({ square, square });
+    sq[0] = Vector<T>{ square, square };
+    sq[1] = Vector<T>{ -square, square };
+    sq[2] = Vector<T>{ -square, -square };
+    sq[3] = Vector<T>{ square, -square };
+    sq[4] = Vector<T>{ square, square };
     sq.apply(st);
     // drawVectors(sq);
     // std::for_each(std::begin(sq), std::end(sq), [](auto& v) { std::cout << v << ","; });
 
-    C1::value_type v1 = { 1, 0 };
-    C1::value_type v2 = { sqrt(2) / 2, sqrt(2) / 2 };
-    C1::value_type v3 = { 0, 1 };
-    auto _data_sink = C1({ v1, v1 + v2, v1 + v2 + v3 });
+    auto v1 = Vector<T>{ 1, 0 };
+    auto v2 = Vector<T>{ sqrt(2) / 2, sqrt(2) / 2 };
+    auto v3 = Vector<T>{ 0, 1 };
+    auto _data_sink = C1(3);
+    _data_sink[0] = v1;
+    _data_sink[1] = v1 + v2;
+    _data_sink[2] = v1 + v2 + v3;
 
     // auto last_pair = _data_sink.back();//multiple tracks
     auto last_pair = _data_sink;
@@ -345,31 +357,28 @@ int main()
 
     auto middle1 = _data_sink[0];
     auto middle2 = _data_sink[1];
-    double angle2 =
-        Matrix<T>::_radToDeg(atan2((middle2.coords[0] - middle1.coords[1]), (middle2.coords[0] - middle1.coords[1])));
+    double angle2 = Matrix<T>::_radToDeg(atan2((middle2[0] - middle1[1]), (middle2[0] - middle1[1])));
     // glRotatef(-angle2, 0.0f, 0.0f, 1.0f);
     st.rotate(-angle2);
-    st.translate(-middle1.coords[0], -middle1.coords[1]);
+    st.translate(-middle1[0], -middle1[1]);
 
     // middle marker
-    Vectors<C1> mid = Vectors<C1>();
-    mid.push_back({ middle1.coords[0], middle1.coords[1] });
-    mid.push_back({ middle2.coords[0], middle2.coords[1] });
+    auto mid = C1(2);
+    mid[0] = Vector<T>{ middle1[0], middle1[1] };
+    mid[1] = Vector<T>{ middle2[0], middle2[1] };
     mid.apply(st);
     // drawVectors(mid);
     // std::for_each(std::begin(mid), std::end(mid), [](auto& v) { std::cout << v << ","; });
 
-    Vectors<C1> vecs = Vectors<C1>();
-    vecs.push_back({ 0, 0 });
-    for (int i = 0; i < left.size(); i++)
+    auto vecs = C1(left.size() + 1);
+    vecs[0] = Vector<T>{ 0, 0 };
+    for (int i = 1; i <= vecs.size(); i++)
     {
-        vecs.push_back({ left[i].coords[0], left[i].coords[1] });
+        vecs[i] = Vector<T>{ left[i - 1][0], left[i - 1][1] };
     }
     vecs.apply(st);
     // drawVectors(vecs);
-    std::for_each(std::begin(vecs), std::end(vecs), [](auto& v) { std::cout << v << ","; });
-
-    auto vec = Vector<int>{ 1 };
+    std::for_each(&vecs[0], &vecs[0] + vecs.size(), [](auto& v) { std::cout << v << ","; });
 
     return 0;
 }
