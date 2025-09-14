@@ -1,5 +1,6 @@
 #include <array>
 #include <iostream>
+#include <stdio.h>
 #include <iterator>
 #include <vector>
 
@@ -66,8 +67,6 @@ public:
     template<typename T>
     void apply(Stack2d<T>& stack);
     template<typename T>
-    void apply3(Matrix2d<T>& matrix);
-    template<typename T>
     void apply2(Matrix2d<T>& matrix);
 
     pod_T& operator[](std::size_t i)
@@ -98,8 +97,6 @@ public:
 
     template<typename T>
     void apply(Stack2d<T>& stack);
-    template<typename T>
-    void apply3(Matrix2d<T>& matrix);
     template<typename T>
     void apply2(Matrix2d<T>& matrix);
 
@@ -150,50 +147,56 @@ void Vectors<pod_T, SIZE>::apply(Stack2d<T>& stack)
             all = Matrix2d<T>::mul(all, m);
 #endif
         });
-        if (SIZE < 2)
-            throw std::logic_error("Matrix2d class does not work with vector dimensions lower than 2");
-        else if (SIZE == 2)
-            apply2(all);
-        else
-            apply3(all);
+        apply2(all);
     }
 }
 template<typename pod_T, std::size_t SIZE>
 template<typename T>
 void CuVectors<pod_T, SIZE>::apply(Stack2d<T>& stack)
 {
-}
-
-template<typename pod_T, std::size_t SIZE>
-template<typename T>
-void Vectors<pod_T, SIZE>::apply3(Matrix2d<T>& m)
-{
-    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&m](pod_T& a) {
-        pod_T value{ (m.x1 * a[0] + m.x2 * a[1] + m.x3 * a[2]),
-                     (m.y1 * a[0] + m.y2 * a[1] + m.y3 * a[2]),
-                     (m.z1 * a[0] + m.z2 * a[1] + m.z3 * a[2]) };
-        return value;
-    });
-}
-template<typename pod_T, std::size_t SIZE>
-template<typename T>
-void CuVectors<pod_T, SIZE>::apply3(Matrix2d<T>& matrix)
-{
+    auto all = Matrix2d<T>::identity();
+    for (auto& m : stack)
+    {
+        all = Matrix2d<T>::mul(all, m);
+    }
+    apply2(all);
 }
 
 template<typename pod_T, std::size_t SIZE>
 template<typename T>
 void Vectors<pod_T, SIZE>::apply2(Matrix2d<T>& m)
 {
-    std::transform(&this->storage[0], &this->storage[0] + this->_size, &this->storage[0], [&m](pod_T& a) {
-        pod_T value{ (m.x1 * a[0] + m.x2 * a[1] + m.x3 * 1), (m.y1 * a[0] + m.y2 * a[1] + m.y3 * 1) };
+    std::transform(&this->storage[0], &this->storage[0] + this->size(), &this->storage[0], [&m](pod_T& a) {
+        pod_T value{ (m.x1 * a.x + m.x2 * a.y + m.x3 * 1), (m.y1 * a.x + m.y2 * a.y + m.y3 * 1) };
         return value;
     });
+}
+template<typename T, typename pod_T>
+__global__ void MatVec(Matrix2d<T>* m, pod_T* v)
+{
+    int i = threadIdx.x;
+    //printf("v[%d] is (%f,%f) with %f,%f,%f,%f,%f,%f,%f,%f,%f\n",i,v[i].x,v[i].y,m->x1,m->x2,m->x3,m->y1,m->y2,m->y3,m->z1,m->z2,m->z3);
+    double x = m->x1 * v[i].x + m->x2 * v[i].y + m->x3 * 1;
+    double y = m->y1 * v[i].x + m->y2 * v[i].y + m->y3 * 1;
+    v[i].x = x;
+    v[i].y = y;
 }
 template<typename pod_T, std::size_t SIZE>
 template<typename T>
 void CuVectors<pod_T, SIZE>::apply2(Matrix2d<T>& matrix)
 {
+    Matrix2d<T>* matrix_;
+    //printf("Sizeof Matrix2d is %d",sizeof(matrix));
+    pod_T* vectors_;
+    //printf("Sizeof this is %d", this->size() * sizeof(pod_T));
+    cudaMalloc(&matrix_, sizeof(matrix));
+    cudaMalloc(&vectors_, this->size() * sizeof(pod_T));
+    cudaMemcpy(matrix_, &matrix, sizeof(matrix), cudaMemcpyHostToDevice);
+    cudaMemcpy(vectors_, this->storage, this->size() * sizeof(pod_T), cudaMemcpyHostToDevice);
+    MatVec<<<1, this->size()>>>(matrix_, vectors_);
+    cudaMemcpy(this->storage, vectors_, this->size() * sizeof(pod_T), cudaMemcpyDeviceToHost);
+    cudaFree(vectors_);
+    cudaFree(matrix_);
 }
 
 template<typename T>
@@ -297,39 +300,26 @@ void Stack2d<T>::translate(T x, T y)
         this->push_back(Matrix2d<T>::translate(x, y));
 }
 
+//POD
 template<typename T>
 struct Vector2d
 {
-    Vector2d()
-    {
-        std::fill(&vec[0], &vec[0] + _size, 0);
-    }
-    Vector2d(std::initializer_list<T> list)
-    {
-        auto index = std::copy(std::begin(list), std::end(list), &vec[0]);
-        std::fill(index, &vec[0] + _size, 0);
-    }
-    T& operator[](std::size_t i)
-    {
-        return vec[i];
-    }
-    static const std::size_t _size = 2;
-    T vec[_size];
+    T x,y;
 };
 template<typename T>
 Vector2d<T> operator+(const Vector2d<T>& a, const Vector2d<T>& b)
 {
     auto c = Vector2d<T>{};
-    c.vec[0] = a.vec[0] + b.vec[0];
-    c.vec[1] = a.vec[1] + b.vec[1];
+    c.x = a.x + b.x;
+    c.y = a.y + b.y;
     return c;
 };
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const Vector2d<T>& v)
 {
     os << "(";
-    os << v.vec[0] << ",";
-    os << v.vec[1];
+    os << v.x << ",";
+    os << v.y;
     os << ")" << std::endl;
     return os;
 }
@@ -379,23 +369,23 @@ int main()
 
     auto middle1 = _data_sink[0];
     auto middle2 = _data_sink[1];
-    double angle2 = Matrix2d<T>::_radToDeg(atan2((middle2[0] - middle1[1]), (middle2[0] - middle1[1])));
+    double angle2 = Matrix2d<T>::_radToDeg(atan2((middle2.x - middle1.y), (middle2.x - middle1.y)));
     // glRotatef(-angle2, 0.0f, 0.0f, 1.0f);
     st.rotate(-angle2);
-    st.translate(-middle1[0], -middle1[1]);
+    st.translate(-middle1.x, -middle1.y);
 
     // middle marker
     auto mid = D(2);
-    mid[0] = Vector2d<T>{ middle1[0], middle1[1] };
-    mid[1] = Vector2d<T>{ middle2[0], middle2[1] };
+    mid[0] = Vector2d<T>{ middle1.x, middle1.y };
+    mid[1] = Vector2d<T>{ middle2.x, middle2.y };
     auto mid_copy = mid;
     auto mid_1 = C1(mid_copy.data(), std::size(mid_copy));
     mid_1.apply(st);
     mid_copy = mid;
-    auto mid_2 = C1(mid_copy.data(), std::size(mid_copy));
+    auto mid_2 = C2(mid_copy.data(), std::size(mid_copy));
     mid_2.apply(st);
     mid_copy = mid;
-    auto mid_3 = C1(mid_copy.data(), std::size(mid_copy));
+    auto mid_3 = C3(mid_copy.data(), std::size(mid_copy));
     mid_3.apply(st);
     // drawVectors(mid);
     std::for_each(&mid_3[0], &mid_3[0] + mid_3.size(), [](auto& v) { std::cout << v << ","; });
@@ -405,16 +395,16 @@ int main()
     vecs[0] = Vector2d<T>{ 0, 0 };
     for (int i = 1; i < vecs.size(); i++)
     {
-        vecs[i] = Vector2d<T>{ left[i - 1][0], left[i - 1][1] };
+        vecs[i] = Vector2d<T>{ left[i - 1].x, left[i - 1].y };
     }
     auto vecs_copy = vecs;
     auto vecs_1 = C1(vecs_copy.data(), std::size(vecs_copy));
     vecs_1.apply(st);
     vecs_copy = vecs;
-    auto vecs_2 = C1(vecs_copy.data(), std::size(vecs_copy));
+    auto vecs_2 = C2(vecs_copy.data(), std::size(vecs_copy));
     vecs_2.apply(st);
     vecs_copy = vecs;
-    auto vecs_3 = C1(vecs_copy.data(), std::size(vecs_copy));
+    auto vecs_3 = C3(vecs_copy.data(), std::size(vecs_copy));
     vecs_3.apply(st);
     // drawVectors(vecs);
     std::for_each(&vecs_3[0], &vecs_3[0] + vecs_3.size(), [](auto& v) { std::cout << v << ","; });
