@@ -1,7 +1,7 @@
 #include <array>
 #include <iostream>
-#include <stdio.h>
 #include <iterator>
+//#include <stdio.h>
 #include <vector>
 
 template<typename pod_T, std::size_t SIZE = 2>
@@ -175,7 +175,8 @@ template<typename T, typename pod_T>
 __global__ void MatVec(Matrix2d<T>* m, pod_T* v)
 {
     int i = threadIdx.x;
-    //printf("v[%d] is (%f,%f) with %f,%f,%f,%f,%f,%f,%f,%f,%f\n",i,v[i].x,v[i].y,m->x1,m->x2,m->x3,m->y1,m->y2,m->y3,m->z1,m->z2,m->z3);
+    // printf("v[%d] is (%f,%f) with
+    // %f,%f,%f,%f,%f,%f,%f,%f,%f\n",i,v[i].x,v[i].y,m->x1,m->x2,m->x3,m->y1,m->y2,m->y3,m->z1,m->z2,m->z3);
     double x = m->x1 * v[i].x + m->x2 * v[i].y + m->x3 * 1;
     double y = m->y1 * v[i].x + m->y2 * v[i].y + m->y3 * 1;
     v[i].x = x;
@@ -186,9 +187,9 @@ template<typename T>
 void CuVectors<pod_T, SIZE>::apply2(Matrix2d<T>& matrix)
 {
     Matrix2d<T>* matrix_;
-    //printf("Sizeof Matrix2d is %d",sizeof(matrix));
+    // printf("Sizeof Matrix2d is %d",sizeof(matrix));
     pod_T* vectors_;
-    //printf("Sizeof this is %d", this->size() * sizeof(pod_T));
+    // printf("Sizeof this is %d", this->size() * sizeof(pod_T));
     cudaMalloc(&matrix_, sizeof(matrix));
     cudaMalloc(&vectors_, this->size() * sizeof(pod_T));
     cudaMemcpy(matrix_, &matrix, sizeof(matrix), cudaMemcpyHostToDevice);
@@ -300,11 +301,11 @@ void Stack2d<T>::translate(T x, T y)
         this->push_back(Matrix2d<T>::translate(x, y));
 }
 
-//POD
+// POD
 template<typename T>
 struct Vector2d
 {
-    T x,y;
+    T x, y;
 };
 template<typename T>
 Vector2d<T> operator+(const Vector2d<T>& a, const Vector2d<T>& b)
