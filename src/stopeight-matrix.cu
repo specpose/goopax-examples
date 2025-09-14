@@ -4,18 +4,18 @@
 //#include <stdio.h>
 #include <vector>
 
-template<typename pod_T, std::size_t SIZE = 2>
+template<typename pod_T>
 class Vectors; // forward declaration! same as in real declaration below
-template<typename pod_T, std::size_t SIZE = 2>
+template<typename pod_T>
 class CuVectors; // forward declaration! same as in real declaration below
 
 /* Col Major 2D*/
 template<typename T>
 struct Matrix2d
 {
-    // template<typename pod_T, std::size_t SIZE>
+    // template<typename pod_T>
     // friend class Vectors;
-    // template<typename pod_T, std::size_t SIZE>
+    // template<typename pod_T>
     // friend class CuVectors;
 
     // public:
@@ -51,7 +51,7 @@ public:
     void translate(T x, T y);
 };
 
-template<typename pod_T, std::size_t SIZE>
+template<typename pod_T>
 class Vectors // same as in forward declaration above!
 {
 public:
@@ -67,7 +67,7 @@ public:
     template<typename T>
     void apply(Stack2d<T>& stack);
     template<typename T>
-    void apply2(Matrix2d<T>& matrix);
+    void apply(Matrix2d<T>& matrix);
 
     pod_T& operator[](std::size_t i)
     {
@@ -82,7 +82,7 @@ private:
     pod_T* storage;
     std::size_t _size;
 };
-template<typename pod_T, std::size_t SIZE>
+template<typename pod_T>
 class CuVectors // same as in forward declaration above!
 {
 public:
@@ -98,7 +98,7 @@ public:
     template<typename T>
     void apply(Stack2d<T>& stack);
     template<typename T>
-    void apply2(Matrix2d<T>& matrix);
+    void apply(Matrix2d<T>& matrix);
 
     pod_T& operator[](std::size_t i)
     {
@@ -123,9 +123,9 @@ private:
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-template<typename pod_T, std::size_t SIZE>
+template<typename pod_T>
 template<typename T>
-void Vectors<pod_T, SIZE>::apply(Stack2d<T>& stack)
+void Vectors<pod_T>::apply(Stack2d<T>& stack)
 {
     auto first = std::begin(stack);
     if (first != std::end(stack))
@@ -147,24 +147,35 @@ void Vectors<pod_T, SIZE>::apply(Stack2d<T>& stack)
             all = Matrix2d<T>::mul(all, m);
 #endif
         });
-        apply2(all);
+        apply(all);
     }
 }
-template<typename pod_T, std::size_t SIZE>
+template<typename pod_T>
 template<typename T>
-void CuVectors<pod_T, SIZE>::apply(Stack2d<T>& stack)
+void CuVectors<pod_T>::apply(Stack2d<T>& stack)
 {
     auto all = Matrix2d<T>::identity();
     for (auto& m : stack)
     {
         all = Matrix2d<T>::mul(all, m);
     }
-    apply2(all);
+    apply(all);
 }
 
-template<typename pod_T, std::size_t SIZE>
+/* template<typename pod_T>
 template<typename T>
-void Vectors<pod_T, SIZE>::apply2(Matrix2d<T>& m)
+void Vectors<pod_T>::apply3(Matrix2d<T>& m)
+{
+    std::transform(&this->storage[0], &this->storage[0] + this->size(), &this->storage[0], [&m](pod_T& a) {
+        pod_T value{ (m.x1 * a.x + m.x2 * a.y + m.x3 * a.z),
+                     (m.y1 * a.x + m.y2 * a.y + m.y3 * a.z),
+                     (m.z1 * a.x + m.z2 * a.y + m.z3 * a.z) };
+        return value;
+    });
+}*/
+template<typename pod_T>
+template<typename T>
+void Vectors<pod_T>::apply(Matrix2d<T>& m)
 {
     std::transform(&this->storage[0], &this->storage[0] + this->size(), &this->storage[0], [&m](pod_T& a) {
         pod_T value{ (m.x1 * a.x + m.x2 * a.y + m.x3 * 1), (m.y1 * a.x + m.y2 * a.y + m.y3 * 1) };
@@ -182,9 +193,9 @@ __global__ void MatVec(Matrix2d<T>* m, pod_T* v)
     v[i].x = x;
     v[i].y = y;
 }
-template<typename pod_T, std::size_t SIZE>
+template<typename pod_T>
 template<typename T>
-void CuVectors<pod_T, SIZE>::apply2(Matrix2d<T>& matrix)
+void CuVectors<pod_T>::apply(Matrix2d<T>& matrix)
 {
     Matrix2d<T>* matrix_;
     // printf("Sizeof Matrix2d is %d",sizeof(matrix));
