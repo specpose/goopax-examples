@@ -154,12 +154,13 @@ template<typename pod_T>
 template<typename T>
 void CuVectors<pod_T>::apply(Stack2d<T>& stack)
 {
-    auto all = Matrix2d<T>::identity();
-    for (auto& m : stack)
+    auto first = std::begin(stack);
+    if (first != std::end(stack))
     {
-        all = Matrix2d<T>::mul(all, m);
+        Matrix2d<T> all = *first;
+        std::for_each(++first, std::end(stack), [&all](Matrix2d<T>& m) { all = Matrix2d<T>::mul(all, m); });
+        apply(all);
     }
-    apply(all);
 }
 
 /* template<typename pod_T>
@@ -183,15 +184,15 @@ void Vectors<pod_T>::apply(Matrix2d<T>& m)
     });
 }
 template<typename T, typename pod_T>
-__global__ void MatVec(Matrix2d<T>* m, pod_T* v)
+__global__ void MatVec(Matrix2d<T>* mu, pod_T* v)
 {
     int i = threadIdx.x;
     // printf("v[%d] is (%f,%f) with
     // %f,%f,%f,%f,%f,%f,%f,%f,%f\n",i,v[i].x,v[i].y,m->x1,m->x2,m->x3,m->y1,m->y2,m->y3,m->z1,m->z2,m->z3);
-    double x = m->x1 * v[i].x + m->x2 * v[i].y + m->x3 * 1;
-    double y = m->y1 * v[i].x + m->y2 * v[i].y + m->y3 * 1;
-    v[i].x = x;
-    v[i].y = y;
+    pod_T a = v[i];
+    Matrix2d<T> m = mu[0];
+    pod_T value{ (m.x1 * a.x + m.x2 * a.y + m.x3 * 1), (m.y1 * a.x + m.y2 * a.y + m.y3 * 1) };
+    v[i] = value;
 }
 template<typename pod_T>
 template<typename T>
