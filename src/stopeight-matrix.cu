@@ -342,7 +342,6 @@ int main()
     using D = std::vector<Vector2d<T>>;
     using C1 = Vectors<Vector2d<T>>;
     using C2 = CuVectors<Vector2d<T>>;
-    using C3 = Vectors<Vector2d<T>>;
     auto st = Stack2d<T>();
     st.identity();
     // st.scale(2, 2);
@@ -357,14 +356,12 @@ int main()
     auto sq_copy = sq;
     auto sq_1 = C1(sq_copy.data(), std::size(sq_copy));
     sq_1.apply(st);
+    std::for_each(&sq_1[0], &sq_1[0] + sq_1.size(), [](auto& v) { std::cout << v << ","; });
     sq_copy = sq;
     auto sq_2 = C2(sq_copy.data(), std::size(sq_copy));
     sq_2.apply(st);
-    sq_copy = sq;
-    auto sq_3 = C3(sq_copy.data(), std::size(sq_copy));
-    sq_3.apply(st);
+    std::for_each(&sq_2[0], &sq_2[0] + sq_2.size(), [](auto& v) { std::cout << v << ","; });
     // drawVectors(sq);
-    std::for_each(&sq_3[0], &sq_3[0] + sq_3.size(), [](auto& v) { std::cout << v << ","; });
     std::cout << std::endl;
 
     auto v1 = Vector2d<T>{ 1, 0 };
@@ -393,14 +390,12 @@ int main()
     auto mid_copy = mid;
     auto mid_1 = C1(mid_copy.data(), std::size(mid_copy));
     mid_1.apply(st);
+    std::for_each(&mid_1[0], &mid_1[0] + mid_1.size(), [](auto& v) { std::cout << v << ","; });
     mid_copy = mid;
     auto mid_2 = C2(mid_copy.data(), std::size(mid_copy));
     mid_2.apply(st);
-    mid_copy = mid;
-    auto mid_3 = C3(mid_copy.data(), std::size(mid_copy));
-    mid_3.apply(st);
+    std::for_each(&mid_2[0], &mid_2[0] + mid_2.size(), [](auto& v) { std::cout << v << ","; });
     // drawVectors(mid);
-    std::for_each(&mid_3[0], &mid_3[0] + mid_3.size(), [](auto& v) { std::cout << v << ","; });
     std::cout << std::endl;
 
     auto vecs = D(left.size() + 1);
@@ -412,14 +407,12 @@ int main()
     auto vecs_copy = vecs;
     auto vecs_1 = C1(vecs_copy.data(), std::size(vecs_copy));
     vecs_1.apply(st);
+    std::for_each(&vecs_1[0], &vecs_1[0] + vecs_1.size(), [](auto& v) { std::cout << v << ","; });
     vecs_copy = vecs;
     auto vecs_2 = C2(vecs_copy.data(), std::size(vecs_copy));
     vecs_2.apply(st);
-    vecs_copy = vecs;
-    auto vecs_3 = C3(vecs_copy.data(), std::size(vecs_copy));
-    vecs_3.apply(st);
+    std::for_each(&vecs_2[0], &vecs_2[0] + vecs_2.size(), [](auto& v) { std::cout << v << ","; });
     // drawVectors(vecs);
-    std::for_each(&vecs_3[0], &vecs_3[0] + vecs_3.size(), [](auto& v) { std::cout << v << ","; });
     std::cout << std::endl;
 
 #ifdef __CUDACC__
