@@ -43,7 +43,7 @@ public:
     void translate(T x, T y);
 };
 
-template<typename pod_T>
+template<typename pod_T, typename tf = std::enable_if_t<std::is_pod<pod_T>::value>>
 class Vectors
 {
 public:
@@ -113,9 +113,9 @@ public:
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-template<typename pod_T>
+template<typename pod_T, typename tf>
 template<typename T>
-void Vectors<pod_T>::apply(Stack2d<T>& stack)
+void Vectors<pod_T, tf>::apply(Stack2d<T>& stack)
 {
     auto first = std::begin(stack);
     if (first != std::end(stack))
@@ -166,9 +166,9 @@ void GooVectors<pod_T>::apply(Stack2d<T>& stack)
 }
 
 /*
-template<typename pod_T>
+template<typename pod_T, typename tf>
 template<typename T>
-void Vectors<pod_T>::apply3(Matrix2d<T>& m)
+void Vectors<pod_T, tf>::apply3(Matrix2d<T>& m)
 {
     std::transform(&this->storage[0], &this->storage[0] + this->size(), &this->storage[0], [&m](pod_T& a) {
         pod_T value{ (m.x1 * a.x + m.x2 * a.y + m.x3 * a.z),
@@ -178,9 +178,9 @@ void Vectors<pod_T>::apply3(Matrix2d<T>& m)
     });
 }
 */
-template<typename pod_T>
+template<typename pod_T, typename tf>
 template<typename T>
-void Vectors<pod_T>::apply(Matrix2d<T>& m)
+void Vectors<pod_T, tf>::apply(Matrix2d<T>& m)
 {
     std::transform(&this->storage[0], &this->storage[0] + this->size(), &this->storage[0], [&m](pod_T& a) {
         pod_T value{ (m.x1 * a.x + m.x2 * a.y + m.x3 * 1), (m.y1 * a.x + m.y2 * a.y + m.y3 * 1) };
