@@ -4,6 +4,8 @@
 //#include <stdio.h>
 #include <vector>
 
+#include <goopax>
+
 template<typename pod_T>
 class Vectors; // forward declaration! same as in real declaration below
 template<typename pod_T>
@@ -78,40 +80,21 @@ public:
         return _size;
     }
 
-private:
+protected:
     pod_T* storage;
+
+private:
     std::size_t _size;
 };
 template<typename pod_T>
-class CuVectors // same as in forward declaration above!
+class CuVectors : public Vectors<pod_T> // same as in forward declaration above!
 {
 public:
-    CuVectors(pod_T* ptr, std::size_t size)
-        : _size(size)
-        , storage(ptr)
-    {
-    }
-    virtual ~CuVectors()
-    {
-    }
-
+    using Vectors<pod_T>::Vectors;
     template<typename T>
     void apply(Stack2d<T>& stack);
     template<typename T>
     void apply(Matrix2d<T>& matrix);
-
-    pod_T& operator[](std::size_t i)
-    {
-        return storage[i];
-    }
-    std::size_t size()
-    {
-        return _size;
-    }
-
-private:
-    pod_T* storage;
-    std::size_t _size;
 };
 
 #include <algorithm>
