@@ -6,20 +6,10 @@
 
 #include <goopax>
 
-template<typename pod_T>
-class Vectors; // forward declaration! same as in real declaration below
-template<typename pod_T>
-class CuVectors; // forward declaration! same as in real declaration below
-
 /* Col Major 2D*/
 template<typename T>
 struct Matrix2d
 {
-    // template<typename pod_T>
-    // friend class Vectors;
-    // template<typename pod_T>
-    // friend class CuVectors;
-
     // public:
     static Matrix2d identity();
 
@@ -54,7 +44,7 @@ public:
 };
 
 template<typename pod_T>
-class Vectors // same as in forward declaration above!
+class Vectors
 {
 public:
     Vectors(pod_T* ptr, std::size_t size)
@@ -87,7 +77,7 @@ private:
     std::size_t _size;
 };
 template<typename pod_T>
-class CuVectors : public Vectors<pod_T> // same as in forward declaration above!
+class CuVectors : public Vectors<pod_T>
 {
 public:
     using Vectors<pod_T>::Vectors;
@@ -146,7 +136,8 @@ void CuVectors<pod_T>::apply(Stack2d<T>& stack)
     }
 }
 
-/* template<typename pod_T>
+/*
+template<typename pod_T>
 template<typename T>
 void Vectors<pod_T>::apply3(Matrix2d<T>& m)
 {
@@ -156,7 +147,8 @@ void Vectors<pod_T>::apply3(Matrix2d<T>& m)
                      (m.z1 * a.x + m.z2 * a.y + m.z3 * a.z) };
         return value;
     });
-}*/
+}
+*/
 template<typename pod_T>
 template<typename T>
 void Vectors<pod_T>::apply(Matrix2d<T>& m)
