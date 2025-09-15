@@ -86,6 +86,23 @@ public:
     template<typename T>
     void apply(Matrix2d<T>& matrix);
 };
+template<typename pod_T>
+class GooVectors : public Vectors<pod_T>
+{
+public:
+    GooVectors(pod_T* ptr, std::size_t size)
+        : Vectors<pod_T>(ptr, size)
+        , dev(goopax::default_device(goopax::env_CUDA))
+        , storage_(dev, size, storage)
+    {
+    }
+    template<typename T>
+    void apply(Stack2d<T>& stack);
+    template<typename T>
+    void apply(Matrix2d<T>& matrix);
+    goopax::goopax_device dev;
+    goopax::buffer<pod_T> storage_;
+};
 
 #include <algorithm>
 #include <cmath>
@@ -135,6 +152,18 @@ void CuVectors<pod_T>::apply(Stack2d<T>& stack)
         apply(all);
     }
 }
+template<typename pod_T>
+template<typename T>
+void GooVectors<pod_T>::apply(Stack2d<T>& stack)
+{
+    auto first = std::begin(stack);
+    if (first != std::end(stack))
+    {
+        Matrix2d<T> all = *first;
+        std::for_each(++first, std::end(stack), [&all](Matrix2d<T>& m) { all = Matrix2d<T>::mul(all, m); });
+        apply(all);
+    }
+}
 
 /*
 template<typename pod_T>
@@ -159,7 +188,7 @@ void Vectors<pod_T>::apply(Matrix2d<T>& m)
     });
 }
 template<typename T, typename pod_T>
-__global__ void MatVec(Matrix2d<T>* mu, pod_T* v)
+__global__ void cuMatVec(Matrix2d<T>* mu, pod_T* v)
 {
     int i = threadIdx.x;
     // printf("v[%d] is (%f,%f) with
@@ -181,10 +210,30 @@ void CuVectors<pod_T>::apply(Matrix2d<T>& matrix)
     cudaMalloc(&vectors_, this->size() * sizeof(pod_T));
     cudaMemcpy(matrix_, &matrix, sizeof(matrix), cudaMemcpyHostToDevice);
     cudaMemcpy(vectors_, this->storage, this->size() * sizeof(pod_T), cudaMemcpyHostToDevice);
-    MatVec<<<1, this->size()>>>(matrix_, vectors_);
+    cuMatVec<<<1, this->size()>>>(matrix_, vectors_);
     cudaMemcpy(this->storage, vectors_, this->size() * sizeof(pod_T), cudaMemcpyDeviceToHost);
     cudaFree(vectors_);
     cudaFree(matrix_);
+}
+template<typename T, typename pod_T>
+void gooMatVec(Matrix2d<T>& m, pod_T& a)
+{
+    typename std::remove_reference<decltype(a)>::type value{};
+    // auto value = goopax::make_gpu<pod_T>{};
+    // typename goopax::goopax_struct_changetype< pod_T, typename goopax::goopax_struct_type<pod_T>::type >::type
+    // value{};
+    value.x = (m.x1 * a.x + m.x2 * a.y + m.x3 * 1);
+    value.y = (m.y1 * a.x + m.y2 * a.y + m.y3 * 1);
+    a = value;
+}
+template<typename pod_T>
+template<typename T>
+void GooVectors<pod_T>::apply(Matrix2d<T>& m)
+{
+    auto k = goopax::kernel(dev, [&](goopax::resource<pod_T>& v) {
+        goopax::gpu_for_global(0, this->size(), [&m, &v](goopax::gpu_uint i) { gooMatVec(m, v[i]); });
+    });
+    k(storage_);
 }
 
 template<typename T>
@@ -294,6 +343,20 @@ struct Vector2d
 {
     T x, y;
 };
+GOOPAX_PREPARE_STRUCT(Vector2d)
+/* namespace goopax
+{
+    template<typename T>
+    struct goopax_struct_type<Vector2d<T>>
+    {
+        using type = T;
+    };
+    template<typename T, typename X>
+    struct goopax_struct_changetype<Vector2d<T>, X>
+    {
+        using type = Vector2d< typename goopax_struct_changetype<T, X>::type >;
+    };
+}*/
 template<typename T>
 Vector2d<T> operator+(const Vector2d<T>& a, const Vector2d<T>& b)
 {
@@ -318,6 +381,7 @@ int main()
     using D = std::vector<Vector2d<T>>;
     using C1 = Vectors<Vector2d<T>>;
     using C2 = CuVectors<Vector2d<T>>;
+    using C3 = GooVectors<Vector2d<T>>;
     auto st = Stack2d<T>();
     st.identity();
     // st.scale(2, 2);
@@ -337,6 +401,10 @@ int main()
     auto sq_2 = C2(sq_copy.data(), std::size(sq_copy));
     sq_2.apply(st);
     std::for_each(&sq_2[0], &sq_2[0] + sq_2.size(), [](auto& v) { std::cout << v << ","; });
+    sq_copy = sq;
+    auto sq_3 = C3(sq_copy.data(), std::size(sq_copy));
+    sq_3.apply(st);
+    std::for_each(&sq_3[0], &sq_3[0] + sq_3.size(), [](auto& v) { std::cout << v << ","; });
     // drawVectors(sq);
     std::cout << std::endl;
 
@@ -371,6 +439,10 @@ int main()
     auto mid_2 = C2(mid_copy.data(), std::size(mid_copy));
     mid_2.apply(st);
     std::for_each(&mid_2[0], &mid_2[0] + mid_2.size(), [](auto& v) { std::cout << v << ","; });
+    mid_copy = mid;
+    auto mid_3 = C3(mid_copy.data(), std::size(mid_copy));
+    mid_3.apply(st);
+    std::for_each(&mid_3[0], &mid_3[0] + mid_3.size(), [](auto& v) { std::cout << v << ","; });
     // drawVectors(mid);
     std::cout << std::endl;
 
@@ -388,6 +460,10 @@ int main()
     auto vecs_2 = C2(vecs_copy.data(), std::size(vecs_copy));
     vecs_2.apply(st);
     std::for_each(&vecs_2[0], &vecs_2[0] + vecs_2.size(), [](auto& v) { std::cout << v << ","; });
+    vecs_copy = vecs;
+    auto vecs_3 = C3(vecs_copy.data(), std::size(vecs_copy));
+    vecs_3.apply(st);
+    std::for_each(&vecs_3[0], &vecs_3[0] + vecs_3.size(), [](auto& v) { std::cout << v << ","; });
     // drawVectors(vecs);
     std::cout << std::endl;
 
