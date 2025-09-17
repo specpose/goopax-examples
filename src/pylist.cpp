@@ -10,14 +10,14 @@
 typedef double T;
 
 static PyObject* goopax_import_list(PyObject* self, PyObject* args){
-    PyObject* list;
+    PyObject* list = NULL;
     PyArg_ParseTuple(args, "O", &list);
     printf("%x: Retrieving list from typle\n",list);
     int size = PyList_Size(list);
     printf("list is size %d\n",size);
-    PyObject* item;
-    PyObject* x;
-    PyObject* y;
+    PyObject* item = NULL;
+    PyObject* x = NULL;
+    PyObject* y = NULL;
     for(int i=0; i<size; i++){
         item = PyList_GetItem(list,i);
         printf("%x: Retrieving vec2d from list\n",item);
@@ -26,10 +26,10 @@ static PyObject* goopax_import_list(PyObject* self, PyObject* args){
         y = PyTuple_GetItem(item,1);
         printf("%x: Retrieving y from vec2d\n",y);
         printf("(%f,%f),\n",PyFloat_AsDouble(x),PyFloat_AsDouble(y));//T
+        Py_DECREF(item);
+        Py_DECREF(x);
+        Py_DECREF(y);
     }
-    Py_DECREF(item);
-    Py_DECREF(x);
-    Py_DECREF(y);
     Py_DECREF(list);
     Py_INCREF(Py_None);
     return Py_None;
@@ -64,7 +64,7 @@ static PyObject* goopax_test_list(PyObject* self, PyObject* what){
         item = _vec2d(test[i]);
         printf("%x: Passing Vec2d to list\n",item);
         PyList_Append(list, item);
-        //Py_DECREF(item);
+        Py_DECREF(item);
     }
     PyObject* printList = PyObject_GetAttrString(self,"import_list");
     PyObject* args = PyTuple_New(1);
@@ -109,14 +109,33 @@ int main(){
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
 
-    PyObject* pmodule = PyImport_ImportModule("goopax");
-    PyObject* pytest = PyObject_GetAttrString(pmodule,"test_list");
-    PyObject* noargs = PyTuple_New(0);
-    PyObject* manual_invocation = PyObject_CallObject(pytest, noargs);
-
-    Py_DECREF(noargs);
+    PyObject* pytest = PyObject_GetAttrString(PyImport_ImportModule("goopax"),"test_list");
+    PyObject* cls = PyObject_GetAttrString(PyImport_ImportModule("unittest"),"FunctionTestCase");
+    PyObject* args = PyTuple_New(1);
+    PyTuple_SetItem(args, 0, pytest);
+    PyObject* constructor = PyObject_CallObject(cls,args);
+    //PyObject* result = PyObject_CallObject(pytest,NULL);
+    PyObject* result = PyObject_CallObject(constructor,NULL);
+    PyObject* times = PyObject_GetAttrString(result,"collectedDurations");
+    PyObject* tindex = NULL;
+    for (int i=0;i<PyList_Size(times);i++) {
+        tindex = PyList_GetItem(times,i);
+        printf("%s took %f.\n",PyBytes_AsString(PyTuple_GetItem(tindex,0)),PyFloat_AsDouble(PyTuple_GetItem(tindex,1)));
+    }
+    int uS = PyList_Size(PyObject_GetAttrString(result,"unexpectedSuccesses"));
+    int f = PyList_Size(PyObject_GetAttrString(result,"failures"));
+    int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
+    long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
+    if (tR>0&&e==0&&f==0&&uS==0)
+        printf("SUCCESS\n");
+    else
+        printf("FAILURE\n");
+    Py_DECREF(tindex);
+    Py_DECREF(times);
+    Py_DECREF(result);
+    Py_DECREF(constructor);
+    Py_DECREF(args);
+    Py_DECREF(cls);
     Py_DECREF(pytest);
-    Py_DECREF(manual_invocation);
-    Py_DECREF(pmodule);
-    return 0;
+    return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
 }
