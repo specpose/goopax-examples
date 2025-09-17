@@ -36,8 +36,53 @@ static PyObject* goopax_import_list(PyObject* self, PyObject* args){
     //return Py_RETURN_NONE;
 }
 
+typedef struct {
+    T x,y;
+} vec2d;
+PyObject* _vec2d(vec2d v){
+    PyObject* result = PyTuple_New(2);
+    printf("%x: New Vec2d created\n",result);
+    PyObject* x = PyFloat_FromDouble(v.x);//T
+    PyObject* y = PyFloat_FromDouble(v.y);//T
+    PyTuple_SetItem(result, 0, x);
+    PyTuple_SetItem(result, 1, y);
+    return result;
+}
+//vec2d operator+(const vec2d& a, const vec2d& b){ vec2d c; c.x=a.x+b.x; c.y=a.y+b.y; return c;}
+
+static PyObject* goopax_test_list(PyObject* self, PyObject* what){
+    PyObject* list = PyList_New(0);
+    vec2d test[] = {{0,0},{1,0},{sqrt(2)/2,sqrt(2)/2},{0,1}};
+    const size_t test_size = sizeof(test)/sizeof(vec2d);
+    for (size_t i=1;i<test_size;i++){
+        test[i].x=test[i-1].x+test[i].x;
+        test[i].y=test[i-1].y+test[i].y;
+    }
+    printf("%x: New List of Vec2d created\n",list);
+    PyObject* item;
+    for (size_t i=0;i<test_size;i++){
+        item = _vec2d(test[i]);
+        printf("%x: Passing Vec2d to list\n",item);
+        PyList_Append(list, item);
+        //Py_DECREF(item);
+    }
+    PyObject* printList = PyObject_GetAttrString(self,"import_list");
+    PyObject* args = PyTuple_New(1);
+    printf("%x: New tuple with list created\n",args);
+    printf("%x: Passing list to typle\n",list);
+    PyTuple_SetItem(args, 0, list);
+    PyObject* result = PyObject_CallObject(printList, args);
+    Py_DECREF(args);
+    Py_DECREF(printList);
+    Py_DECREF(list);
+    Py_DECREF(item);
+    Py_DECREF(result);
+    return PyLong_FromLong(0);
+}
+
 static PyMethodDef goopax_methods[] = {
     {"import_list", goopax_import_list, METH_VARARGS, ""},
+    {"test_list", goopax_test_list, METH_NOARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
@@ -57,20 +102,6 @@ PyMODINIT_FUNC PyInit_goopax(void){
     return PyModuleDef_Init(&goopax_module);
 }
 
-typedef struct {
-    T x,y;
-} vec2d;
-PyObject* _vec2d(vec2d v){
-    PyObject* result = PyTuple_New(2);
-    printf("%x: New Vec2d created\n",result);
-    PyObject* x = PyFloat_FromDouble(v.x);//T
-    PyObject* y = PyFloat_FromDouble(v.y);//T
-    PyTuple_SetItem(result, 0, x);
-    PyTuple_SetItem(result, 1, y);
-    return result;
-}
-//vec2d operator+(const vec2d& a, const vec2d& b){ vec2d c; c.x=a.x+b.x; c.y=a.y+b.y; return c;}
-
 int main(){
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
@@ -78,33 +109,14 @@ int main(){
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
 
-    vec2d test[] = {{0,0},{1,0},{sqrt(2)/2,sqrt(2)/2},{0,1}};
-    const size_t test_size = sizeof(test)/sizeof(vec2d);
-    for (size_t i=1;i<test_size;i++){
-        test[i].x=test[i-1].x+test[i].x;
-        test[i].y=test[i-1].y+test[i].y;
-    }
-    PyObject* list = PyList_New(0);
-    printf("%x: New List of Vec2d created\n",list);
-    PyObject* item;
-    for (size_t i=0;i<test_size;i++){
-        item = _vec2d(test[i]);
-        printf("%x: Passing Vec2d to list\n",item);
-        PyList_Append(list, item);
-    }
-
     PyObject* pmodule = PyImport_ImportModule("goopax");
-    PyObject* printList = PyObject_GetAttrString(pmodule,"import_list");
-    PyObject* args = PyTuple_New(1);
-    printf("%x: New tuple with list created\n",args);
-    printf("%x: Passing list to typle\n",list);
-    PyTuple_SetItem(args, 0, list);
-    PyObject* result = PyObject_CallObject(printList, args);
-    Py_DECREF(args);
-    Py_DECREF(printList);
+    PyObject* pytest = PyObject_GetAttrString(pmodule,"test_list");
+    PyObject* noargs = PyTuple_New(0);
+    PyObject* manual_invocation = PyObject_CallObject(pytest, noargs);
+
+    Py_DECREF(noargs);
+    Py_DECREF(pytest);
+    Py_DECREF(manual_invocation);
     Py_DECREF(pmodule);
-    Py_DECREF(list);
-    Py_DECREF(item);
-    Py_DECREF(result);
     return 0;
 }
