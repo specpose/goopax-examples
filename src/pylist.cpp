@@ -9,10 +9,10 @@
 
 typedef double T;
 
-static PyObject* goopax_import_list(PyObject* self, PyObject* args){
+static PyObject* pylist_print_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
     PyArg_ParseTuple(args, "O", &list);
-    printf("%x: Retrieving list from typle\n",list);
+    printf("%x: Retrieving list from tuple\n",list);
     int size = PyList_Size(list);
     printf("list is size %d\n",size);
     PyObject* item = NULL;
@@ -50,7 +50,7 @@ PyObject* _vec2d(vec2d v){
 }
 //vec2d operator+(const vec2d& a, const vec2d& b){ vec2d c; c.x=a.x+b.x; c.y=a.y+b.y; return c;}
 
-static PyObject* goopax_test_list(PyObject* self, PyObject* what){
+static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     PyObject* list = PyList_New(0);
     vec2d test[] = {{0,0},{1,0},{sqrt(2)/2,sqrt(2)/2},{0,1}};
     const size_t test_size = sizeof(test)/sizeof(vec2d);
@@ -66,10 +66,10 @@ static PyObject* goopax_test_list(PyObject* self, PyObject* what){
         PyList_Append(list, item);
         Py_DECREF(item);
     }
-    PyObject* printList = PyObject_GetAttrString(self,"import_list");
+    PyObject* printList = PyObject_GetAttrString(self,"print_list");
     PyObject* args = PyTuple_New(1);
     printf("%x: New tuple with list created\n",args);
-    printf("%x: Passing list to typle\n",list);
+    printf("%x: Passing list to tuple\n",list);
     PyTuple_SetItem(args, 0, list);
     PyObject* result = PyObject_CallObject(printList, args);
     Py_DECREF(args);
@@ -80,36 +80,36 @@ static PyObject* goopax_test_list(PyObject* self, PyObject* what){
     return PyLong_FromLong(0);
 }
 
-static PyMethodDef goopax_methods[] = {
-    {"import_list", goopax_import_list, METH_VARARGS, ""},
-    {"test_list", goopax_test_list, METH_NOARGS, ""},
+static PyMethodDef pylist_methods[] = {
+    {"print_list", pylist_print_list, METH_VARARGS, ""},
+    {"test_list", pylist_test_list, METH_NOARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
-static struct PyModuleDef goopax_module = {
+static struct PyModuleDef pylist_module = {
     PyModuleDef_HEAD_INIT,
-    "goopax",
+    "pylist",
     "",
     0,
-    goopax_methods,
+    pylist_methods,
     NULL,
     NULL,
     NULL,
     NULL
 };
 
-PyMODINIT_FUNC PyInit_goopax(void){
-    return PyModuleDef_Init(&goopax_module);
+PyMODINIT_FUNC PyInit_pylist(void){
+    return PyModuleDef_Init(&pylist_module);
 }
 
 int main(){
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
-    PyImport_AppendInittab("goopax", PyInit_goopax);
+    PyImport_AppendInittab("pylist", PyInit_pylist);
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
 
-    PyObject* pytest = PyObject_GetAttrString(PyImport_ImportModule("goopax"),"test_list");
+    PyObject* pytest = PyObject_GetAttrString(PyImport_ImportModule("pylist"),"test_list");
     PyObject* cls = PyObject_GetAttrString(PyImport_ImportModule("unittest"),"FunctionTestCase");
     PyObject* args = PyTuple_New(1);
     PyTuple_SetItem(args, 0, pytest);
@@ -126,10 +126,6 @@ int main(){
     int f = PyList_Size(PyObject_GetAttrString(result,"failures"));
     int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
-    if (tR>0&&e==0&&f==0&&uS==0)
-        printf("SUCCESS\n");
-    else
-        printf("FAILURE\n");
     Py_DECREF(tindex);
     Py_DECREF(times);
     Py_DECREF(result);
