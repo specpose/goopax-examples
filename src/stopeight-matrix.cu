@@ -1,3 +1,6 @@
+#if _DEBUG
+#define DEBUG 1
+#endif
 #include <array>
 #include <iostream>
 #include <iterator>
@@ -26,6 +29,7 @@ struct Matrix2d
     double static _degToRad(double deg);
 
     // private:
+    // static bool operator==(const Matrix2d& a, const Matrix2d& b);
     static Matrix2d mul(const Matrix2d& a, const Matrix2d& b);
     T x1, x2, x3, y1, y2, y3, z1, z2, z3;
 };
@@ -120,15 +124,15 @@ void Vectors<pod_T, tf>::apply(Stack2d<T>& stack)
     auto first = std::begin(stack);
     if (first != std::end(stack))
     {
-#if DEVELOPMENT
+#if DEBUG
         if (*first == Matrix2d<T>::identity())
             throw std::logic_error("multiplying identity matrix has performance penalty.");
-        if (first.isSingular())
+        if (first->isSingular())
             throw std::logic_error("singular matrices are not invertible.");
 #endif
         Matrix2d<T> all = *first;
         std::for_each(++first, std::end(stack), [&all](Matrix2d<T>& m) {
-#if DEVELOPMENT
+#if DEBUG
             if (m == Matrix2d<T>::identity())
                 throw std::logic_error("multiplying identity matrix has performance penalty.");
             if (m.isSingular())
@@ -253,7 +257,7 @@ T Matrix2d<T>::det()
 template<typename T>
 bool Matrix2d<T>::isSingular()
 {
-#if DEVELOPMENT
+#if DEBUG
     return (det() == 0);
 #else
     return false;
@@ -291,6 +295,13 @@ template<typename T>
 double Matrix2d<T>::_degToRad(double deg)
 {
     return deg / (180.0 / M_PI);
+}
+
+template<typename T>
+bool operator==(const Matrix2d<T>& a, const Matrix2d<T>& b)
+{
+    return a.x1 == b.x1 && a.x2 == b.x2 && a.x3 == b.x3 && a.y1 == b.y1 && a.y2 == b.y2 && a.y3 == b.y3 && a.z1 == b.z1
+           && a.z2 == b.z2 && a.z3 == b.z3;
 }
 
 template<typename T>
@@ -380,10 +391,19 @@ int main()
     using T = double;
     using D = std::vector<Vector2d<T>>;
     using C1 = Vectors<Vector2d<T>>;
+#if DEBUG
+    auto st2 = Stack2d<T>();
+    st2.push_back(Matrix2d<T>{ 1, 2, 0, 2, 4, 0, 0, 0, 0 });
+    st2.push_back(Matrix2d<T>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
+    auto test = D(1);
+    test[0] = Vector2d<T>{ 1, 0 };
+    auto test_1 = C1(test.data(), std::size(test));
+    test_1.apply(st2);
+#endif
     using C2 = CuVectors<Vector2d<T>>;
     using C3 = GooVectors<Vector2d<T>>;
     auto st = Stack2d<T>();
-    st.identity();
+    // st.identity();
     // st.scale(2, 2);
 
     auto sq = D(5);
