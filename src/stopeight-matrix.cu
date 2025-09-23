@@ -20,11 +20,11 @@ struct Matrix2d
 
     bool isSingular();
 
-    static Matrix2d scale(T x, T y);
+    static Matrix2d scale(const T& x, const T& y);
 
-    static Matrix2d rotate(T deg);
+    static Matrix2d rotate(double deg);
 
-    static Matrix2d translate(T x, T y);
+    static Matrix2d translate(const T& x, const T& y);
     double static _radToDeg(double rad);
     double static _degToRad(double deg);
 
@@ -42,9 +42,9 @@ public:
     using std::vector<Matrix2d<T>>::vector;
 
     void identity();
-    void scale(T x, T y);
-    void rotate(T deg);
-    void translate(T x, T y);
+    void scale(const T& x, const T& y);
+    void rotate(double deg);
+    void translate(const T& x, const T& y);
 };
 
 template<typename pod_T, typename tf = std::enable_if_t<std::is_pod<pod_T>::value>>
@@ -61,9 +61,9 @@ public:
     }
 
     template<typename T>
-    void apply(Stack2d<T>& stack);
+    void apply(const Stack2d<T>& stack);
     template<typename T>
-    void apply(Matrix2d<T>& matrix);
+    void apply(const Matrix2d<T>& matrix);
 
     pod_T& operator[](std::size_t i)
     {
@@ -86,9 +86,9 @@ class CuVectors : public Vectors<pod_T>
 public:
     using Vectors<pod_T>::Vectors;
     template<typename T>
-    void apply(Stack2d<T>& stack);
+    void apply(const Stack2d<T>& stack);
     template<typename T>
-    void apply(Matrix2d<T>& matrix);
+    void apply(const Matrix2d<T>& matrix);
 };
 template<typename pod_T>
 class GooVectors : public Vectors<pod_T>
@@ -101,9 +101,11 @@ public:
     {
     }
     template<typename T>
-    void apply(Stack2d<T>& stack);
+    void apply(const Stack2d<T>& stack);
     template<typename T>
-    void apply(Matrix2d<T>& matrix);
+    void apply(const Matrix2d<T>& matrix);
+
+protected:
     goopax::goopax_device dev;
     goopax::buffer<pod_T> storage_;
 };
@@ -119,7 +121,7 @@ public:
 
 template<typename pod_T, typename tf>
 template<typename T>
-void Vectors<pod_T, tf>::apply(Stack2d<T>& stack)
+void Vectors<pod_T, tf>::apply(const Stack2d<T>& stack)
 {
     auto first = std::begin(stack);
     if (first != std::end(stack))
@@ -131,7 +133,7 @@ void Vectors<pod_T, tf>::apply(Stack2d<T>& stack)
             throw std::logic_error("singular matrices are not invertible.");
 #endif
         Matrix2d<T> all = *first;
-        std::for_each(++first, std::end(stack), [&all](Matrix2d<T>& m) {
+        std::for_each(++first, std::end(stack), [&all](const Matrix2d<T>& m) {
 #if DEBUG
             if (m == Matrix2d<T>::identity())
                 throw std::logic_error("multiplying identity matrix has performance penalty.");
@@ -146,25 +148,25 @@ void Vectors<pod_T, tf>::apply(Stack2d<T>& stack)
 }
 template<typename pod_T>
 template<typename T>
-void CuVectors<pod_T>::apply(Stack2d<T>& stack)
+void CuVectors<pod_T>::apply(const Stack2d<T>& stack)
 {
     auto first = std::begin(stack);
     if (first != std::end(stack))
     {
         Matrix2d<T> all = *first;
-        std::for_each(++first, std::end(stack), [&all](Matrix2d<T>& m) { all = Matrix2d<T>::mul(all, m); });
+        std::for_each(++first, std::end(stack), [&all](const Matrix2d<T>& m) { all = Matrix2d<T>::mul(all, m); });
         apply(all);
     }
 }
 template<typename pod_T>
 template<typename T>
-void GooVectors<pod_T>::apply(Stack2d<T>& stack)
+void GooVectors<pod_T>::apply(const Stack2d<T>& stack)
 {
     auto first = std::begin(stack);
     if (first != std::end(stack))
     {
         Matrix2d<T> all = *first;
-        std::for_each(++first, std::end(stack), [&all](Matrix2d<T>& m) { all = Matrix2d<T>::mul(all, m); });
+        std::for_each(++first, std::end(stack), [&all](const Matrix2d<T>& m) { all = Matrix2d<T>::mul(all, m); });
         apply(all);
     }
 }
@@ -184,7 +186,7 @@ void Vectors<pod_T, tf>::apply3(Matrix2d<T>& m)
 */
 template<typename pod_T, typename tf>
 template<typename T>
-void Vectors<pod_T, tf>::apply(Matrix2d<T>& m)
+void Vectors<pod_T, tf>::apply(const Matrix2d<T>& m)
 {
     std::transform(&this->storage[0], &this->storage[0] + this->size(), &this->storage[0], [&m](pod_T& a) {
         pod_T value{ (m.x1 * a.x + m.x2 * a.y + m.x3 * 1), (m.y1 * a.x + m.y2 * a.y + m.y3 * 1) };
@@ -204,7 +206,7 @@ __global__ void cuMatVec(Matrix2d<T>* mu, pod_T* v)
 }
 template<typename pod_T>
 template<typename T>
-void CuVectors<pod_T>::apply(Matrix2d<T>& matrix)
+void CuVectors<pod_T>::apply(const Matrix2d<T>& matrix)
 {
     Matrix2d<T>* matrix_;
     // printf("Sizeof Matrix2d is %d",sizeof(matrix));
@@ -220,7 +222,7 @@ void CuVectors<pod_T>::apply(Matrix2d<T>& matrix)
     cudaFree(matrix_);
 }
 template<typename T, typename pod_T>
-void gooMatVec(Matrix2d<T>& m, pod_T& a)
+void gooMatVec(const Matrix2d<T>& m, pod_T& a)
 {
     typename std::remove_reference<decltype(a)>::type value{};
     // auto value = goopax::make_gpu<pod_T>{};
@@ -232,7 +234,7 @@ void gooMatVec(Matrix2d<T>& m, pod_T& a)
 }
 template<typename pod_T>
 template<typename T>
-void GooVectors<pod_T>::apply(Matrix2d<T>& m)
+void GooVectors<pod_T>::apply(const Matrix2d<T>& m)
 {
     auto k = goopax::kernel(dev, [&](goopax::resource<pod_T>& v) {
         goopax::gpu_for_global(0, this->size(), [&m, &v](goopax::gpu_uint i) { gooMatVec(m, v[i]); });
@@ -265,14 +267,14 @@ bool Matrix2d<T>::isSingular()
 }
 
 template<typename T>
-Matrix2d<T> Matrix2d<T>::scale(T x, T y)
+Matrix2d<T> Matrix2d<T>::scale(const T& x, const T& y)
 {
     auto m = Matrix2d<T>{ x, 0, 0, 0, y, 0, 0, 0, 1 };
     return m;
 }
 
 template<typename T>
-Matrix2d<T> Matrix2d<T>::rotate(T deg)
+Matrix2d<T> Matrix2d<T>::rotate(double deg)
 {
     T rad = _degToRad(deg);
     auto m = Matrix2d<T>{ cos(rad), sin(rad), 0, -sin(rad), cos(rad), 0, 0, 0, 1 };
@@ -280,7 +282,7 @@ Matrix2d<T> Matrix2d<T>::rotate(T deg)
 }
 
 template<typename T>
-Matrix2d<T> Matrix2d<T>::translate(T x, T y)
+Matrix2d<T> Matrix2d<T>::translate(const T& x, const T& y)
 {
     auto m = Matrix2d<T>{ 1, 0, 0, 0, 1, 0, x, y, 1 };
     return m;
@@ -328,21 +330,21 @@ void Stack2d<T>::identity()
 }
 
 template<typename T>
-void Stack2d<T>::scale(T x, T y)
+void Stack2d<T>::scale(const T& x, const T& y)
 {
     if (!((1 == x) && (1 == y)))
         this->push_back(Matrix2d<T>::scale(x, y));
 }
 
 template<typename T>
-void Stack2d<T>::rotate(T deg)
+void Stack2d<T>::rotate(double deg)
 {
     if (!(deg == 0))
         this->push_back(Matrix2d<T>::rotate(deg));
 }
 
 template<typename T>
-void Stack2d<T>::translate(T x, T y)
+void Stack2d<T>::translate(const T& x, const T& y)
 {
     if (!((0 == x) && (0 == y)))
         this->push_back(Matrix2d<T>::translate(x, y));
@@ -393,8 +395,8 @@ int main()
     using C1 = Vectors<Vector2d<T>>;
 #if DEBUG
     auto st2 = Stack2d<T>();
-    st2.push_back(Matrix2d<T>{ 1, 2, 0, 2, 4, 0, 0, 0, 0 });
-    st2.push_back(Matrix2d<T>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
+    // st2.push_back(Matrix2d<T>{ 1, 2, 0, 2, 4, 0, 0, 0, 0 });
+    // st2.push_back(Matrix2d<T>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
     auto test = D(1);
     test[0] = Vector2d<T>{ 1, 0 };
     auto test_1 = C1(test.data(), std::size(test));
@@ -403,7 +405,7 @@ int main()
     using C2 = CuVectors<Vector2d<T>>;
     using C3 = GooVectors<Vector2d<T>>;
     auto st = Stack2d<T>();
-    // st.identity();
+    st.identity();
     // st.scale(2, 2);
 
     auto sq = D(5);
