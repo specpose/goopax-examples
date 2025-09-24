@@ -3,8 +3,21 @@
 #include <stdio.h>
 
 #if DEBUG
+#define Py_DECREF_bak Py_DECREF
+void __delete(PyObject* X){
+    //int* refcnt = (int*)(X);
+    //*refcnt = 0;
+    Py_DECREF_bak(X);
+    if (Py_REFCNT(X) != 0)
+        printf("%d\n",Py_REFCNT(X));
+    if (Py_REFCNT(X) < 0)
+        abort();
+}
+#endif
+
+#if DEBUG
 #undef Py_DECREF
-#define Py_DECREF(X) free(X)
+#define Py_DECREF(X) __delete(X);
 #endif
 
 typedef double T;
@@ -15,18 +28,15 @@ static PyObject* pylist_print_list(PyObject* self, PyObject* args){
     printf("%x: Retrieving list from tuple\n",list);
     int size = PyList_Size(list);
     printf("list is size %d\n",size);
-    PyObject* item = NULL;
-    PyObject* x = NULL;
-    PyObject* y = NULL;
     for(int i=0; i<size; i++){
-        item = PyList_GetItem(list,i);
+        PyObject* item = PyList_GetItem(list,i);
         printf("%x: Retrieving vec2d from list\n",item);
-        x = PyTuple_GetItem(item,0);
+        PyObject* x = PyTuple_GetItem(item,0);
         printf("%x: Retrieving x from vec2d\n",x);
-        y = PyTuple_GetItem(item,1);
+        PyObject* y = PyTuple_GetItem(item,1);
+        Py_DECREF(item);//1
         printf("%x: Retrieving y from vec2d\n",y);
         printf("(%f,%f),\n",PyFloat_AsDouble(x),PyFloat_AsDouble(y));//T
-        Py_DECREF(item);
         Py_DECREF(x);
         Py_DECREF(y);
     }
@@ -59,12 +69,10 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
         test[i].y=test[i-1].y+test[i].y;
     }
     printf("%x: New List of Vec2d created\n",list);
-    PyObject* item;
     for (size_t i=0;i<test_size;i++){
-        item = _vec2d(test[i]);
+        PyObject* item = _vec2d(test[i]);
         printf("%x: Passing Vec2d to list\n",item);
         PyList_Append(list, item);
-        Py_DECREF(item);
     }
     PyObject* printList = PyObject_GetAttrString(self,"print_list");
     PyObject* args = PyTuple_New(1);
@@ -74,9 +82,6 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     PyObject* result = PyObject_CallObject(printList, args);
     Py_DECREF(args);
     Py_DECREF(printList);
-    Py_DECREF(list);
-    Py_DECREF(item);
-    Py_DECREF(result);
     return PyLong_FromLong(0);
 }
 
@@ -109,29 +114,45 @@ int main(){
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
 
-    PyObject* pytest = PyObject_GetAttrString(PyImport_ImportModule("pylist"),"test_list");
-    PyObject* cls = PyObject_GetAttrString(PyImport_ImportModule("unittest"),"FunctionTestCase");
+    PyObject* pylist = PyImport_ImportModule("pylist");
+    PyObject* pytest = PyObject_GetAttrString(pylist,"test_list");
+    //Py_DECREF(pylist);//3
+    PyObject* unittest = PyImport_ImportModule("unittest");
+    PyObject* cls = PyObject_GetAttrString(unittest,"FunctionTestCase");
+    Py_DECREF(unittest);//1
     PyObject* args = PyTuple_New(1);
     PyTuple_SetItem(args, 0, pytest);
+    Py_DECREF(pytest);//1
+    //Py_DECREF(pylist);//2
     PyObject* constructor = PyObject_CallObject(cls,args);
+    Py_DECREF(args);
+    Py_DECREF(pylist);//1
+    //Py_DECREF(cls);//5
     //PyObject* result = PyObject_CallObject(pytest,NULL);
-    PyObject* result = PyObject_CallObject(constructor,NULL);
+    PyObject* result = PyObject_CallObject(constructor,NULL);//segfaults
+    Py_DECREF(constructor);
+    //Py_DECREF(cls);//3
     PyObject* times = PyObject_GetAttrString(result,"collectedDurations");
-    PyObject* tindex = NULL;
+    //Py_DECREF(cls);//2
     for (int i=0;i<PyList_Size(times);i++) {
-        tindex = PyList_GetItem(times,i);
-        printf("%s took %f.\n",PyBytes_AsString(PyTuple_GetItem(tindex,0)),PyFloat_AsDouble(PyTuple_GetItem(tindex,1)));
+        PyObject* tindex = PyList_GetItem(times,i);
+        Py_DECREF(times);//1
+        printf("%s took %f.\n",PyTuple_GetItem(tindex,0),PyFloat_AsDouble(PyTuple_GetItem(tindex,1)));
+        Py_DECREF(tindex);
     }
+    Py_DECREF(times);//0
     int uS = PyList_Size(PyObject_GetAttrString(result,"unexpectedSuccesses"));
     int f = PyList_Size(PyObject_GetAttrString(result,"failures"));
     int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
-    Py_DECREF(tindex);
-    Py_DECREF(times);
     Py_DECREF(result);
-    Py_DECREF(constructor);
-    Py_DECREF(args);
-    Py_DECREF(cls);
-    Py_DECREF(pytest);
+    Py_DECREF(cls);//1
+    if (Py_FinalizeEx() < 0)
+        abort();
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
 }
+
+#if DEBUG
+#undef Py_DECREF
+#define Py_DECREF Py_DECREF_bak;
+#endif
