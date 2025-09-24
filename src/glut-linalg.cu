@@ -239,12 +239,14 @@ Matrix3d<T> Matrix3d<T>::identity()
 template<typename T>
 T Matrix3d<T>::det(const Matrix3d<T>& m)
 {
-    //auto det = x1 * y2 * z3 + y1 * z2 * x3 + z1 * x2 * y3 - x1 * z2 * x3 - y1 * x2 * z3 - z1 * y2 * x3;
-    auto det = -m.x2 * m.y3 * m.z4 * m.w1 + m.x2 * m.y4 * m.z3 * m.w1 + m.x3 * m.y2 * m.z4 * m.w1 - m.x3 * m.y4 * m.z2 * m.w1 - m.x4 * m.y2 * m.z3 * m.w1
-               + m.x4 * m.y3 * m.z2 * m.w1 + m.x1 * m.y3 * m.z4 * m.w2 - m.x1 * m.y4 * m.z3 * m.w2 - m.x3 * m.y1 * m.z4 * m.w2 + m.x3 * m.y4 * m.z1 * m.w2
-               + m.x4 * m.y1 * m.z3 * m.w2 - m.x4 * m.y3 * m.z1 * m.w2 - m.w3 * m.x1 * m.y2 * m.z4 + m.w3 * m.x1 * m.y4 * m.z2 + m.w3 * m.x2 * m.y1 * m.z4
-               - m.w3 * m.x2 * m.y4 * m.z1 - m.w3 * m.x4 * m.y1 * m.z2 + m.w3 * m.x4 * m.y2 * m.z1 + m.w4 * m.x1 * m.y2 * m.z3 - m.w4 * m.x1 * m.y3 * m.z2
-               - m.w4 * m.x2 * m.y1 * m.z3 + m.w4 * m.x2 * m.y3 * m.z1 + m.w4 * m.x3 * m.y1 * m.z2 - m.w4 * m.x3 * m.y2 * m.z1;
+    // auto det = x1 * y2 * z3 + y1 * z2 * x3 + z1 * x2 * y3 - x1 * z2 * x3 - y1 * x2 * z3 - z1 * y2 * x3;
+    auto det =
+        -m.x2 * m.y3 * m.z4 * m.w1 + m.x2 * m.y4 * m.z3 * m.w1 + m.x3 * m.y2 * m.z4 * m.w1 - m.x3 * m.y4 * m.z2 * m.w1
+        - m.x4 * m.y2 * m.z3 * m.w1 + m.x4 * m.y3 * m.z2 * m.w1 + m.x1 * m.y3 * m.z4 * m.w2 - m.x1 * m.y4 * m.z3 * m.w2
+        - m.x3 * m.y1 * m.z4 * m.w2 + m.x3 * m.y4 * m.z1 * m.w2 + m.x4 * m.y1 * m.z3 * m.w2 - m.x4 * m.y3 * m.z1 * m.w2
+        - m.w3 * m.x1 * m.y2 * m.z4 + m.w3 * m.x1 * m.y4 * m.z2 + m.w3 * m.x2 * m.y1 * m.z4 - m.w3 * m.x2 * m.y4 * m.z1
+        - m.w3 * m.x4 * m.y1 * m.z2 + m.w3 * m.x4 * m.y2 * m.z1 + m.w4 * m.x1 * m.y2 * m.z3 - m.w4 * m.x1 * m.y3 * m.z2
+        - m.w4 * m.x2 * m.y1 * m.z3 + m.w4 * m.x2 * m.y3 * m.z1 + m.w4 * m.x3 * m.y1 * m.z2 - m.w4 * m.x3 * m.y2 * m.z1;
     return det;
 }
 
@@ -278,7 +280,22 @@ Matrix3d<T> Matrix3d<T>::rotate(double deg, const T& x, const T& y, const T& z)
 {
     double rad = _degToRad(deg);
     double f = 1 - cos(rad);
-    auto m = Matrix3d<T>{ x*x*f+cos(rad), y*x*f+z*sin(rad), z*x*f-y*sin(rad), 0, x*y*f-z*sin(rad), y*y*f+cos(rad), z*y*f+x*sin(rad), 0, x*z*f+y*sin(rad), y*z*f-x*sin(rad), z*z*f+cos(rad), 0, 0, 0, 0, 1 };
+    auto m = Matrix3d<T>{ x * x * f + cos(rad),
+                          y * x * f + z * sin(rad),
+                          z * x * f - y * sin(rad),
+                          0,
+                          x * y * f - z * sin(rad),
+                          y * y * f + cos(rad),
+                          z * y * f + x * sin(rad),
+                          0,
+                          x * z * f + y * sin(rad),
+                          y * z * f - x * sin(rad),
+                          z * z * f + cos(rad),
+                          0,
+                          0,
+                          0,
+                          0,
+                          1 };
     return m;
 }
 
@@ -303,7 +320,8 @@ double Matrix3d<T>::_degToRad(double deg)
 template<typename T>
 bool operator==(const Matrix3d<T>& a, const Matrix3d<T>& b)
 {
-    return a.x1 == b.x1 && a.x2 == b.x2 && a.x3 == b.x3 && a.x4 == b.x4 && a.y1 == b.y1 && a.y2 == b.y2 && a.y3 == b.y3 && a.y4 == b.y4 && a.z1 == b.z1 && a.z2 == b.z2 && a.z3 == b.z3 && a.z4 == b.z4 && a.w1 == b.w1
+    return a.x1 == b.x1 && a.x2 == b.x2 && a.x3 == b.x3 && a.x4 == b.x4 && a.y1 == b.y1 && a.y2 == b.y2 && a.y3 == b.y3
+           && a.y4 == b.y4 && a.z1 == b.z1 && a.z2 == b.z2 && a.z3 == b.z3 && a.z4 == b.z4 && a.w1 == b.w1
            && a.w2 == b.w2 && a.w3 == b.w3 && a.w4 == b.w4;
 }
 
@@ -328,18 +346,12 @@ template<typename T>
 Matrix3d<T> Matrix3d<T>::mul(const Matrix3d<T>& a, const Matrix3d<T>& b)
 {
     auto m = Matrix3d<T>{
-        a.x1 * b.x1 + a.y1 * b.x2 + a.z1 * b.x3 + a.w1 * b.x4,
-        a.x1 * b.y1 + a.y1 * b.y2 + a.z1 * b.y3 + a.w1 * b.y4,
-        a.x1 * b.z1 + a.y1 * b.z2 + a.z1 * b.z3 + a.w1 * b.z4,
-        a.x1 * b.w1 + a.y1 * b.w2 + a.z1 * b.w3 + a.w1 * b.w4,
-        a.x2 * b.x1 + a.y2 * b.x2 + a.z2 * b.x3 + a.w2 * b.x4,
-        a.x2 * b.y1 + a.y2 * b.y2 + a.z2 * b.y3 + a.w2 * b.y4,
-        a.x2 * b.z1 + a.y2 * b.z2 + a.z2 * b.z3 + a.w2 * b.z4,
-        a.x2 * b.w1 + a.y2 * b.w2 + a.z2 * b.w3 + a.w2 * b.w4,
-        a.x3 * b.x1 + a.y3 * b.x2 + a.z3 * b.x3 + a.w3 * b.x4,
-        a.x3 * b.y1 + a.y3 * b.y2 + a.z3 * b.y3 + a.w3 * b.y4,
-        a.x3 * b.z1 + a.y3 * b.z2 + a.z3 * b.z3 + a.w3 * b.z4,
-        a.x3 * b.w1 + a.y3 * b.w2 + a.z3 * b.w3 + a.w3 * b.w4
+        a.x1 * b.x1 + a.y1 * b.x2 + a.z1 * b.x3 + a.w1 * b.x4, a.x1 * b.y1 + a.y1 * b.y2 + a.z1 * b.y3 + a.w1 * b.y4,
+        a.x1 * b.z1 + a.y1 * b.z2 + a.z1 * b.z3 + a.w1 * b.z4, a.x1 * b.w1 + a.y1 * b.w2 + a.z1 * b.w3 + a.w1 * b.w4,
+        a.x2 * b.x1 + a.y2 * b.x2 + a.z2 * b.x3 + a.w2 * b.x4, a.x2 * b.y1 + a.y2 * b.y2 + a.z2 * b.y3 + a.w2 * b.y4,
+        a.x2 * b.z1 + a.y2 * b.z2 + a.z2 * b.z3 + a.w2 * b.z4, a.x2 * b.w1 + a.y2 * b.w2 + a.z2 * b.w3 + a.w2 * b.w4,
+        a.x3 * b.x1 + a.y3 * b.x2 + a.z3 * b.x3 + a.w3 * b.x4, a.x3 * b.y1 + a.y3 * b.y2 + a.z3 * b.y3 + a.w3 * b.y4,
+        a.x3 * b.z1 + a.y3 * b.z2 + a.z3 * b.z3 + a.w3 * b.z4, a.x3 * b.w1 + a.y3 * b.w2 + a.z3 * b.w3 + a.w3 * b.w4
     };
     return m;
 }
@@ -468,7 +480,7 @@ int main()
     auto middle2 = _data_sink[1];
     double angle2 = Matrix3d<T>::_radToDeg(atan2((middle2.x - middle1.y), (middle2.x - middle1.y)));
     // glRotatef(-angle2, 0.0f, 0.0f, 1.0f);
-    //st.rotate(-angle2, 0, 0, 1);
+    // st.rotate(-angle2, 0, 0, 1);
     st.rotate(-angle2, 0, 0, 1);
     st.translate(-middle1.x, -middle1.y, -middle1.z);
 
