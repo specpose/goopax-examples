@@ -16,9 +16,9 @@ struct Matrix3d
     // public:
     static Matrix3d identity();
 
-    //T det();
+    static T det(const Matrix3d& matrix);
 
-    //bool isSingular();
+    static bool isSingular(const Matrix3d& matrix);
 
     static Matrix3d scale(const T& x, const T& y, const T& z);
 
@@ -128,16 +128,16 @@ void Vectors<pod_T, tf>::apply(const Stack3d<T>& stack)
 #if DEBUG
         if (*first == Matrix3d<T>::identity())
             throw std::logic_error("multiplying identity matrix has performance penalty.");
-        //if (first->isSingular())
-        //    throw std::logic_error("singular matrices are not invertible.");
+        if (Matrix3d<T>::isSingular(*first))
+            throw std::logic_error("singular matrices are not invertible.");
 #endif
         Matrix3d<T> all = *first;
         std::for_each(++first, std::end(stack), [&all](const Matrix3d<T>& m) {
 #if DEBUG
             if (m == Matrix3d<T>::identity())
                 throw std::logic_error("multiplying identity matrix has performance penalty.");
-            //if (m.isSingular())
-            //    throw std::logic_error("singular matrices are not invertible.");
+            if (Matrix3d<T>::isSingular(m))
+                throw std::logic_error("singular matrices are not invertible.");
 #else
             all = Matrix3d<T>::mul(all, m);
 #endif
@@ -236,22 +236,27 @@ Matrix3d<T> Matrix3d<T>::identity()
     return m;
 }
 
-/* template<typename T>
-T Matrix2d<T>::det()
+template<typename T>
+T Matrix3d<T>::det(const Matrix3d<T>& m)
 {
-    auto det = x1 * y2 * z3 + y1 * z2 * x3 + z1 * x2 * y3 - x1 * z2 * x3 - y1 * x2 * z3 - z1 * y2 * x3;
+    //auto det = x1 * y2 * z3 + y1 * z2 * x3 + z1 * x2 * y3 - x1 * z2 * x3 - y1 * x2 * z3 - z1 * y2 * x3;
+    auto det = -m.x2 * m.y3 * m.z4 * m.w1 + m.x2 * m.y4 * m.z3 * m.w1 + m.x3 * m.y2 * m.z4 * m.w1 - m.x3 * m.y4 * m.z2 * m.w1 - m.x4 * m.y2 * m.z3 * m.w1
+               + m.x4 * m.y3 * m.z2 * m.w1 + m.x1 * m.y3 * m.z4 * m.w2 - m.x1 * m.y4 * m.z3 * m.w2 - m.x3 * m.y1 * m.z4 * m.w2 + m.x3 * m.y4 * m.z1 * m.w2
+               + m.x4 * m.y1 * m.z3 * m.w2 - m.x4 * m.y3 * m.z1 * m.w2 - m.w3 * m.x1 * m.y2 * m.z4 + m.w3 * m.x1 * m.y4 * m.z2 + m.w3 * m.x2 * m.y1 * m.z4
+               - m.w3 * m.x2 * m.y4 * m.z1 - m.w3 * m.x4 * m.y1 * m.z2 + m.w3 * m.x4 * m.y2 * m.z1 + m.w4 * m.x1 * m.y2 * m.z3 - m.w4 * m.x1 * m.y3 * m.z2
+               - m.w4 * m.x2 * m.y1 * m.z3 + m.w4 * m.x2 * m.y3 * m.z1 + m.w4 * m.x3 * m.y1 * m.z2 - m.w4 * m.x3 * m.y2 * m.z1;
     return det;
-}*/
+}
 
-/* template<typename T>
-bool Matrix2d<T>::isSingular()
+template<typename T>
+bool Matrix3d<T>::isSingular(const Matrix3d<T>& matrix)
 {
 #if DEBUG
-    return (det() == 0);
+    return (Matrix3d<T>::det(matrix) == 0);
 #else
     return false;
 #endif
-}*/
+}
 
 template<typename T>
 Matrix3d<T> Matrix3d<T>::scale(const T& x, const T& y, const T& z)
