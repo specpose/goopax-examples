@@ -125,36 +125,25 @@ int main(){
 
     PyObject* pylist = PyImport_ImportModule("pylist");
     PyObject* tl = PyObject_GetAttrString(pylist,"test_list");
-    //Py_DECREF(pylist);//3
+    PyObject* tm = PyObject_GetAttrString(pylist,"test_memoryview");
     PyObject* unittest = PyImport_ImportModule("unittest");
     PyObject* tcase = PyObject_GetAttrString(unittest,"FunctionTestCase");
     PyObject* tsuite = PyObject_GetAttrString(unittest,"TestSuite");
     PyObject* tresult = PyObject_GetAttrString(unittest,"TestResult");
     if (!tresult)
         printf("TestResult class was not found in unittest\n");
-    Py_DECREF(unittest);//1
-    PyObject* tcase_args = PyTuple_New(1);
-    PyTuple_SetItem(tcase_args, 0, tl);
-    Py_DECREF(tl);//1
-    //Py_DECREF(pylist);//2
-    PyObject* case1 = PyObject_CallObject(tcase,tcase_args);
-    Py_DECREF(tcase_args);
-    Py_DECREF(pylist);//1
-    //Py_DECREF(tcase);//5
-    //PyObject* result = PyObject_CallObject(case1,NULL);
+    PyObject* case1_args = PyTuple_New(1);
+    PyTuple_SetItem(case1_args, 0, tl);
+    PyObject* case1 = PyObject_CallObject(tcase,case1_args);
+    PyObject* case2_args = PyTuple_New(1);
+    PyTuple_SetItem(case2_args, 0, tm);
+    PyObject* case2 = PyObject_CallObject(tcase,case2_args);
     PyObject* tsuite_args = PyTuple_New(1);
-    //PyObject* tsuite_kwargs = PyDict_New();
-    PyObject* tests_tuple = PyTuple_New(1);
+    PyObject* tests_tuple = PyTuple_New(2);
     PyTuple_SetItem(tests_tuple,0,case1);
-    //PyDict_SetItemString(tsuite_kwargs, "tests", tests_tuple);
+    PyTuple_SetItem(tests_tuple,1,case2);
     PyTuple_SetItem(tsuite_args,0,tests_tuple);
-    //Py_DECREF(case1);
     PyObject* runner = PyObject_CallObject(tsuite, tsuite_args);
-    //printf("Test Suite size is %d\n",PyObject_Size(runner));*/
-    //PyObject* null = PyObject_CallObject(tresult,NULL);
-    //PyObject* add_1 = PyObject_Call(runner,tsuite_args,tsuite_kwargs);
-    //printf("Test Suite size is %d\n",PyObject_Size(runner));
-    ////Py_DECREF(tcase);//3
     PyObject* run_method = PyObject_GetAttrString(runner,"run");
     if (!run_method)
         printf("run_method not found\n");
@@ -167,20 +156,14 @@ int main(){
     if (!run)
         abort();
     PyObject* times = PyObject_GetAttrString(result,"collectedDurations");
-    //Py_DECREF(tcase);//2
     for (int i=0;i<PyList_Size(times);i++) {
         PyObject* tindex = PyList_GetItem(times,i);
-        Py_DECREF(times);//1
         printf("%s took %f.\n",PyTuple_GetItem(tindex,0),PyFloat_AsDouble(PyTuple_GetItem(tindex,1)));
-        Py_DECREF(tindex);
     }
-    Py_DECREF(times);//0
     int uS = PyList_Size(PyObject_GetAttrString(result,"unexpectedSuccesses"));
     int f = PyList_Size(PyObject_GetAttrString(result,"failures"));
     int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
-    Py_DECREF(result);
-    Py_DECREF(tcase);//1
     if (Py_FinalizeEx() < 0)
         abort();
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
