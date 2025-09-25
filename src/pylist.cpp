@@ -13,22 +13,23 @@ void __delete(PyObject* X){
     if (Py_REFCNT(X) < 0)
         abort();
 }
-#endif
-
-#if DEBUG
 #undef Py_DECREF
 #define Py_DECREF(X) __delete(X);
 #endif
 
 typedef double T;
+static const size_t dims = 2;
 
-static PyObject* pylist_print_list(PyObject* self, PyObject* args){
+static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
     PyArg_ParseTuple(args, "O", &list);
     printf("%x: Retrieving list from tuple\n",list);
-    int size = PyList_Size(list);
+    size_t size = PyList_Size(list);
     printf("list is size %d\n",size);
-    for(int i=0; i<size; i++){
+    T* buffer;
+    buffer = malloc(dims*sizeof(T)*size);
+    printf("buffer size in bytes is %d\n", sizeof(*buffer));
+    for(size_t i=0; i<size; i++){
         PyObject* item = PyList_GetItem(list,i);
         printf("%x: Retrieving vec2d from list\n",item);
         PyObject* x = PyTuple_GetItem(item,0);
@@ -36,11 +37,14 @@ static PyObject* pylist_print_list(PyObject* self, PyObject* args){
         PyObject* y = PyTuple_GetItem(item,1);
         Py_DECREF(item);//1
         printf("%x: Retrieving y from vec2d\n",y);
-        printf("(%f,%f),\n",PyFloat_AsDouble(x),PyFloat_AsDouble(y));//T
+        buffer[dims*i]=PyFloat_AsDouble(x);
+        buffer[dims*i+1]=PyFloat_AsDouble(y);
+        printf("(%f,%f),\n",buffer[dims*i],buffer[dims*i+1]);//T
         Py_DECREF(x);
         Py_DECREF(y);
     }
     Py_DECREF(list);
+    free(buffer);
     Py_INCREF(Py_None);
     return Py_None;
     //return Py_RETURN_NONE;
@@ -50,7 +54,7 @@ typedef struct {
     T x,y;
 } vec2d;
 PyObject* _vec2d(vec2d v){
-    PyObject* result = PyTuple_New(2);
+    PyObject* result = PyTuple_New(dims);
     printf("%x: New Vec2d created\n",result);
     PyObject* x = PyFloat_FromDouble(v.x);//T
     PyObject* y = PyFloat_FromDouble(v.y);//T
@@ -74,7 +78,7 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
         printf("%x: Passing Vec2d to list\n",item);
         PyList_Append(list, item);
     }
-    PyObject* printList = PyObject_GetAttrString(self,"print_list");
+    PyObject* printList = PyObject_GetAttrString(self,"process_list");
     PyObject* args = PyTuple_New(1);
     printf("%x: New tuple with list created\n",args);
     printf("%x: Passing list to tuple\n",list);
@@ -85,9 +89,14 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     return PyLong_FromLong(0);
 }
 
+static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
+    return PyLong_FromLong(0);
+}
+
 static PyMethodDef pylist_methods[] = {
-    {"print_list", pylist_print_list, METH_VARARGS, ""},
+    {"process_list", pylist_process_list, METH_VARARGS, ""},
     {"test_list", pylist_test_list, METH_NOARGS, ""},
+    {"test_memoryview", pylist_test_memoryview, METH_NOARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
@@ -115,25 +124,50 @@ int main(){
     PyConfig_Clear(&config);
 
     PyObject* pylist = PyImport_ImportModule("pylist");
-    PyObject* pytest = PyObject_GetAttrString(pylist,"test_list");
+    PyObject* tl = PyObject_GetAttrString(pylist,"test_list");
     //Py_DECREF(pylist);//3
     PyObject* unittest = PyImport_ImportModule("unittest");
-    PyObject* cls = PyObject_GetAttrString(unittest,"FunctionTestCase");
+    PyObject* tcase = PyObject_GetAttrString(unittest,"FunctionTestCase");
+    PyObject* tsuite = PyObject_GetAttrString(unittest,"TestSuite");
+    PyObject* tresult = PyObject_GetAttrString(unittest,"TestResult");
+    if (!tresult)
+        printf("TestResult class was not found in unittest\n");
     Py_DECREF(unittest);//1
-    PyObject* args = PyTuple_New(1);
-    PyTuple_SetItem(args, 0, pytest);
-    Py_DECREF(pytest);//1
+    PyObject* tcase_args = PyTuple_New(1);
+    PyTuple_SetItem(tcase_args, 0, tl);
+    Py_DECREF(tl);//1
     //Py_DECREF(pylist);//2
-    PyObject* constructor = PyObject_CallObject(cls,args);
-    Py_DECREF(args);
+    PyObject* case1 = PyObject_CallObject(tcase,tcase_args);
+    Py_DECREF(tcase_args);
     Py_DECREF(pylist);//1
-    //Py_DECREF(cls);//5
-    //PyObject* result = PyObject_CallObject(pytest,NULL);
-    PyObject* result = PyObject_CallObject(constructor,NULL);//segfaults
-    Py_DECREF(constructor);
-    //Py_DECREF(cls);//3
+    //Py_DECREF(tcase);//5
+    //PyObject* result = PyObject_CallObject(case1,NULL);
+    PyObject* tsuite_args = PyTuple_New(1);
+    //PyObject* tsuite_kwargs = PyDict_New();
+    PyObject* tests_tuple = PyTuple_New(1);
+    PyTuple_SetItem(tests_tuple,0,case1);
+    //PyDict_SetItemString(tsuite_kwargs, "tests", tests_tuple);
+    PyTuple_SetItem(tsuite_args,0,tests_tuple);
+    //Py_DECREF(case1);
+    PyObject* runner = PyObject_CallObject(tsuite, tsuite_args);
+    //printf("Test Suite size is %d\n",PyObject_Size(runner));*/
+    //PyObject* null = PyObject_CallObject(tresult,NULL);
+    //PyObject* add_1 = PyObject_Call(runner,tsuite_args,tsuite_kwargs);
+    //printf("Test Suite size is %d\n",PyObject_Size(runner));
+    ////Py_DECREF(tcase);//3
+    PyObject* run_method = PyObject_GetAttrString(runner,"run");
+    if (!run_method)
+        printf("run_method not found\n");
+    PyObject* result = PyObject_CallObject(tresult,NULL);
+    if (!result)
+        printf("Result was not instantiated\n");
+    PyObject* run_args = PyTuple_New(1);
+    PyTuple_SetItem(run_args,0,result);
+    PyObject* run = PyObject_CallObject(run_method,run_args);
+    if (!run)
+        abort();
     PyObject* times = PyObject_GetAttrString(result,"collectedDurations");
-    //Py_DECREF(cls);//2
+    //Py_DECREF(tcase);//2
     for (int i=0;i<PyList_Size(times);i++) {
         PyObject* tindex = PyList_GetItem(times,i);
         Py_DECREF(times);//1
@@ -146,7 +180,7 @@ int main(){
     int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
     Py_DECREF(result);
-    Py_DECREF(cls);//1
+    Py_DECREF(tcase);//1
     if (Py_FinalizeEx() < 0)
         abort();
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
