@@ -1,4 +1,7 @@
 #define PY_SSIZE_T_CLEAN
+#if !DEBUG
+#define Py_LIMITED_API 1
+#endif
 #include <Python.h>
 #include <stdio.h>
 
@@ -18,30 +21,32 @@ void __delete(PyObject* X){
 #endif
 
 typedef double T;
-static const size_t dims = 2;
+static const size_t expected_vec_dims = 2;
+
+static void process(T* buffer, size_t* strides, size_t* shape, size_t length){}
+static void checkBufferUnderrun(size_t expected_size, size_t size_obtained){}
 
 static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
     PyArg_ParseTuple(args, "O", &list);
     printf("%x: Retrieving list from tuple\n",list);
-    size_t size = PyList_Size(list);
-    printf("list is size %d\n",size);
+    size_t shape_1 = PyList_Size(list);
+    printf("list is size %d\n",shape_1);
     T* buffer;
-    buffer = malloc(dims*sizeof(T)*size);
-    printf("buffer size in bytes is %d\n", sizeof(*buffer));
-    for(size_t i=0; i<size; i++){
+    buffer = (T*)malloc(expected_vec_dims*sizeof(T)*shape_1);
+    for(size_t i=0; i<shape_1; i++){
         PyObject* item = PyList_GetItem(list,i);
         printf("%x: Retrieving vec2d from list\n",item);
-        PyObject* x = PyTuple_GetItem(item,0);
-        printf("%x: Retrieving x from vec2d\n",x);
-        PyObject* y = PyTuple_GetItem(item,1);
+        size_t shape_2 = PyTuple_Size(item);
+        if (shape_2 != expected_vec_dims)
+            abort();
+        for (size_t j=0; j<shape_2; j++){
+            PyObject* e = PyTuple_GetItem(item,j);
+            printf("%x: Retrieving element %d from vec2d\n",e,j);
+            buffer[shape_2*i+j]=PyFloat_AsDouble(e);
+            printf("%f,\n",buffer[shape_2*i+j]);//T
+        }
         Py_DECREF(item);//1
-        printf("%x: Retrieving y from vec2d\n",y);
-        buffer[dims*i]=PyFloat_AsDouble(x);
-        buffer[dims*i+1]=PyFloat_AsDouble(y);
-        printf("(%f,%f),\n",buffer[dims*i],buffer[dims*i+1]);//T
-        Py_DECREF(x);
-        Py_DECREF(y);
     }
     Py_DECREF(list);
     free(buffer);
@@ -54,7 +59,7 @@ typedef struct {
     T x,y;
 } vec2d;
 PyObject* _vec2d(vec2d v){
-    PyObject* result = PyTuple_New(dims);
+    PyObject* result = PyTuple_New(expected_vec_dims);
     printf("%x: New Vec2d created\n",result);
     PyObject* x = PyFloat_FromDouble(v.x);//T
     PyObject* y = PyFloat_FromDouble(v.y);//T
@@ -113,15 +118,12 @@ static struct PyModuleDef pylist_module = {
 };
 
 PyMODINIT_FUNC PyInit_pylist(void){
-    return PyModuleDef_Init(&pylist_module);
+    return PyModule_Create(&pylist_module);
 }
 
 int main(){
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
     PyImport_AppendInittab("pylist", PyInit_pylist);
-    Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
+    Py_Initialize();
 
     PyObject* pylist = PyImport_ImportModule("pylist");
     PyObject* tl = PyObject_GetAttrString(pylist,"test_list");
@@ -164,8 +166,9 @@ int main(){
     int f = PyList_Size(PyObject_GetAttrString(result,"failures"));
     int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
-    if (Py_FinalizeEx() < 0)
-        abort();
+    Py_Finalize();
+    //if (Py_FinalizeEx() < 0)
+    //    abort();
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
 }
 
