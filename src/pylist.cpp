@@ -94,7 +94,63 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     return PyLong_FromLong(0);
 }
 
+#if DEBUG
+typedef struct {
+    PyObject_HEAD
+} MyObject;
+int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
+    printf("GetBuffer\n");
+    vec2d test[] = {{0,0},{1,0},{sqrt(2)/2,sqrt(2)/2},{0,1}};
+    vec2d* ptr = (vec2d*)malloc(8*sizeof(T));
+    if (!ptr)
+        abort();
+    for (int i=0; i<4; i++)
+        ptr[i] = test[i];
+    view->buf = (void*)ptr;
+    PyObject* _exporter = exporter;
+    view->obj = _exporter;
+    return 0;
+};
+void release_buffer(PyObject *exporter, Py_buffer *view){
+    printf("ReleaseBuffer\n");
+    free((void*)view->buf);
+};
+/*void myobj_dealloc(PyObject *self){ printf("Dealloc\n"); };
+PyObject *myobj_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
+    printf("Alloc\n");
+    return NULL;
+};*/
+static PyBufferProcs Buf_Procs = {
+    &get_buffer,
+    &release_buffer
+};
+static PyTypeObject MyObject_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "mymod.MyObject",
+    .tp_basicsize = sizeof(MyObject),
+//    .tp_itemsize = 0,
+//    .tp_dealloc = (destructor)myobj_dealloc,
+    .tp_as_buffer = &Buf_Procs,
+    .tp_doc = PyDoc_STR("My objects"),
+//    .tp_init = 0,
+//    .tp_alloc = 0,
+//    .tp_new = myobj_new,
+};
+#endif
+
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
+#if DEBUG
+    PyType_Ready(&MyObject_Type);
+    MyObject* myobj = PyObject_New(MyObject,&MyObject_Type);
+//    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, &MyObject_Type);
+    Py_buffer view;
+    if (PyObject_GetBuffer((PyObject*)myobj,&view,PyBUF_SIMPLE)==0){
+        for (int i=0; i<4; i++)
+            printf("(%f,%f)\n",((vec2d*)view.buf)[i].x,((vec2d*)view.buf)[i].y);
+        PyBuffer_Release(&view);
+    }
+    PyObject_Del((void*)myobj);
+#endif
     return PyLong_FromLong(0);
 }
 
