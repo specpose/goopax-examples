@@ -24,7 +24,7 @@ typedef double T;
 static const size_t expected_vec_dims = 2;
 
 static void process(T* buffer, size_t* strides, size_t* shape, size_t length){}
-static void checkBufferUnderrun(size_t expected_size, size_t size_obtained){}
+static void bufferUnderrun(size_t expected_size, size_t size_obtained){ }
 
 static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
@@ -49,6 +49,7 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
         Py_DECREF(item);//1
     }
     Py_DECREF(list);
+    //process
     free(buffer);
     Py_INCREF(Py_None);
     return Py_None;
@@ -68,6 +69,19 @@ PyObject* _vec2d(vec2d v){
     return result;
 }
 //vec2d operator+(const vec2d& a, const vec2d& b){ vec2d c; c.x=a.x+b.x; c.y=a.y+b.y; return c;}
+
+static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
+    PyObject* mvobject = NULL;
+    PyArg_ParseTuple(args, "O", &mvobject);
+    printf("%x: Retrieving memoryview from tuple\n",mvobject);
+    Py_buffer* view = PyMemoryView_GET_BUFFER(mvobject);
+    //Py_buffer* view = (Py_buffer*)mvobject;
+    for (int i=0; i<8; i+=2)
+        printf("(%f,%f)\n",((T*)view->buf)[i],((T*)view->buf)[i+1]);
+    //process
+    Py_INCREF(Py_None);
+    return Py_None;
+}
 
 static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     PyObject* list = PyList_New(0);
@@ -101,11 +115,22 @@ typedef struct {
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
     vec2d test[] = {{0,0},{1,0},{sqrt(2)/2,sqrt(2)/2},{0,1}};
+    Py_ssize_t* shape = (Py_ssize_t*)malloc(2*sizeof(T));
+    shape[0]=3;
+    shape[1]=2;
+    Py_ssize_t* strides = (Py_ssize_t*)malloc(2*sizeof(T));
+    strides[0]=16;
+    strides[1]=8;
+    view->shape = shape;
+    view->strides = strides;
+    view->suboffsets = NULL;
     vec2d* ptr = (vec2d*)malloc(8*sizeof(T));
     if (!ptr)
         abort();
     for (int i=0; i<4; i++)
         ptr[i] = test[i];
+    view->readonly = 1;
+    view->format = NULL;
     view->buf = (void*)ptr;
     PyObject* _exporter = exporter;
     view->obj = _exporter;
@@ -113,6 +138,8 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
 };
 void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
+    free((void*)view->shape);
+    free((void*)view->strides);
     free((void*)view->buf);
 };
 /*void myobj_dealloc(PyObject *self){ printf("Dealloc\n"); };
@@ -144,9 +171,14 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
     MyObject* myobj = PyObject_New(MyObject,&MyObject_Type);
 //    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, &MyObject_Type);
     Py_buffer view;
-    if (PyObject_GetBuffer((PyObject*)myobj,&view,PyBUF_SIMPLE)==0){
-        for (int i=0; i<4; i++)
-            printf("(%f,%f)\n",((vec2d*)view.buf)[i].x,((vec2d*)view.buf)[i].y);
+    if (PyObject_GetBuffer((PyObject*)myobj,&view,PyBUF_STRIDES)==0){
+        PyObject* mvobject = PyMemoryView_FromBuffer(&view);
+        PyObject* printMemoryview = PyObject_GetAttrString(self,"process_memoryview");
+        PyObject* args = PyTuple_New(1);
+        printf("%x: New tuple with memoryview created\n",args);
+        printf("%x: Passing memoryview to tuple\n",mvobject);
+        PyTuple_SetItem(args, 0, mvobject);
+        PyObject* result = PyObject_CallObject(printMemoryview, args);
         PyBuffer_Release(&view);
     }
     PyObject_Del((void*)myobj);
@@ -156,6 +188,7 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
 
 static PyMethodDef pylist_methods[] = {
     {"process_list", pylist_process_list, METH_VARARGS, ""},
+    {"process_memoryview", pylist_process_memoryview, METH_VARARGS, ""},
     {"test_list", pylist_test_list, METH_NOARGS, ""},
     {"test_memoryview", pylist_test_memoryview, METH_NOARGS, ""},
     {NULL, NULL, 0, NULL}
@@ -179,7 +212,7 @@ PyMODINIT_FUNC PyInit_pylist(void){
 
 int main(){
     PyImport_AppendInittab("pylist", PyInit_pylist);
-    Py_Initialize();
+    Py_InitializeEx(0);
 
     PyObject* pylist = PyImport_ImportModule("pylist");
     PyObject* tl = PyObject_GetAttrString(pylist,"test_list");
@@ -222,9 +255,12 @@ int main(){
     int f = PyList_Size(PyObject_GetAttrString(result,"failures"));
     int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
+#if DEBUG
+    if (Py_FinalizeEx() < 0)
+        abort();
+#else
     Py_Finalize();
-    //if (Py_FinalizeEx() < 0)
-    //    abort();
+#endif
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
 }
 
