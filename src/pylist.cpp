@@ -23,24 +23,29 @@ void __delete(PyObject* X){
 typedef double T;
 static const size_t expected_vec_dims = 2;
 
-static void process(T* buffer, size_t* strides, size_t* shape, size_t length){}
-static void bufferUnderrun(size_t expected_size, size_t size_obtained){ }
+static void bufferUnderrun(Py_ssize_t expected_size, Py_ssize_t size_obtained){}
+static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
+    printf("shape=(%d,%d)\n",shape[0],shape[1]);
+    T* _buffer = (T*)buffer;
+    for (Py_ssize_t i=0; i<shape[0]*shape[1]; i+=2)
+        printf("(%f,%f)\n",_buffer[i],_buffer[i+1]);
+}
 
 static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
     PyArg_ParseTuple(args, "O", &list);
     printf("%x: Retrieving list from tuple\n",list);
-    size_t shape_1 = PyList_Size(list);
+    Py_ssize_t shape_1 = PyList_Size(list);
     printf("list is size %d\n",shape_1);
     T* buffer;
     buffer = (T*)malloc(expected_vec_dims*sizeof(T)*shape_1);
-    for(size_t i=0; i<shape_1; i++){
+    for(Py_ssize_t i=0; i<shape_1; i++){
         PyObject* item = PyList_GetItem(list,i);
         printf("%x: Retrieving vec2d from list\n",item);
-        size_t shape_2 = PyTuple_Size(item);
+        Py_ssize_t shape_2 = PyTuple_Size(item);
         if (shape_2 != expected_vec_dims)
             abort();
-        for (size_t j=0; j<shape_2; j++){
+        for (Py_ssize_t j=0; j<shape_2; j++){
             PyObject* e = PyTuple_GetItem(item,j);
             printf("%x: Retrieving element %d from vec2d\n",e,j);
             buffer[shape_2*i+j]=PyFloat_AsDouble(e);
@@ -49,7 +54,15 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
         Py_DECREF(item);//1
     }
     Py_DECREF(list);
-    //process
+    Py_ssize_t* shape = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
+    shape[0]=shape_1;
+    shape[1]=expected_vec_dims;
+    Py_ssize_t* strides = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
+    strides[0]=expected_vec_dims*sizeof(T);
+    strides[1]=sizeof(T);
+    process((void*)buffer,strides,shape);
+    free(shape);
+    free(strides);
     free(buffer);
     Py_INCREF(Py_None);
     return Py_None;
@@ -76,21 +89,16 @@ static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
     printf("%x: Retrieving memoryview from tuple\n",mvobject);
     Py_buffer* view = PyMemoryView_GET_BUFFER(mvobject);
     //Py_buffer* view = (Py_buffer*)mvobject;
-    for (int i=0; i<8; i+=2)
-        printf("(%f,%f)\n",((T*)view->buf)[i],((T*)view->buf)[i+1]);
-    //process
+    //printf("shape=(%d,%d)\n",view->shape[0],view->shape[1]);
+    process(view->buf,view->strides,view->shape);
     Py_INCREF(Py_None);
     return Py_None;
 }
 
 static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     PyObject* list = PyList_New(0);
-    vec2d test[] = {{0,0},{1,0},{sqrt(2)/2,sqrt(2)/2},{0,1}};
+    vec2d test[] = {{0,0},{1,0},{1+sqrt(2)/2,sqrt(2)/2},{1+sqrt(2)/2,1+sqrt(2)/2}};
     const size_t test_size = sizeof(test)/sizeof(vec2d);
-    for (size_t i=1;i<test_size;i++){
-        test[i].x=test[i-1].x+test[i].x;
-        test[i].y=test[i-1].y+test[i].y;
-    }
     printf("%x: New List of Vec2d created\n",list);
     for (size_t i=0;i<test_size;i++){
         PyObject* item = _vec2d(test[i]);
@@ -114,20 +122,24 @@ typedef struct {
 } MyObject;
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
-    vec2d test[] = {{0,0},{1,0},{sqrt(2)/2,sqrt(2)/2},{0,1}};
-    Py_ssize_t* shape = (Py_ssize_t*)malloc(2*sizeof(T));
-    shape[0]=3;
+    T test[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
+    view->ndim = 2;
+    Py_ssize_t* shape = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
+    shape[0]=4;
     shape[1]=2;
-    Py_ssize_t* strides = (Py_ssize_t*)malloc(2*sizeof(T));
+    Py_ssize_t* strides = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
     strides[0]=16;
     strides[1]=8;
     view->shape = shape;
     view->strides = strides;
     view->suboffsets = NULL;
-    vec2d* ptr = (vec2d*)malloc(8*sizeof(T));
+    view->format = "d";//T
+    view->itemsize = sizeof(T);
+    view->len = view->shape[0]*view->shape[1]*view->itemsize;
+    T* ptr = (T*)malloc(view->len);
     if (!ptr)
         abort();
-    for (int i=0; i<4; i++)
+    for (int i=0; i<view->shape[0]*view->shape[1]; i++)
         ptr[i] = test[i];
     view->readonly = 1;
     view->format = NULL;
@@ -172,7 +184,12 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
 //    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, &MyObject_Type);
     Py_buffer view;
     if (PyObject_GetBuffer((PyObject*)myobj,&view,PyBUF_STRIDES)==0){
+        //printf("shape=(%d,%d)\n",view.shape[0],view.shape[1]);
         PyObject* mvobject = PyMemoryView_FromBuffer(&view);
+        if (PyMemoryView_Check(mvobject)!=1)
+            abort();
+        //Py_buffer* view_ = PyMemoryView_GET_BUFFER(mvobject);
+        //printf("shape=(%d,%d)\n",view_->shape[0],view_->shape[1]);
         PyObject* printMemoryview = PyObject_GetAttrString(self,"process_memoryview");
         PyObject* args = PyTuple_New(1);
         printf("%x: New tuple with memoryview created\n",args);
