@@ -21,6 +21,7 @@ void __delete(PyObject* X){
 #endif
 
 typedef double T;
+static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
 static const size_t expected_vec_dims = 2;
 
 static void bufferUnderrun(Py_ssize_t expected_size, Py_ssize_t size_obtained){}
@@ -69,19 +70,15 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     //return Py_RETURN_NONE;
 }
 
-typedef struct {
-    T x,y;
-} vec2d;
-PyObject* _vec2d(vec2d v){
+PyObject* _vec2d(T x, T y){
     PyObject* result = PyTuple_New(expected_vec_dims);
     printf("%x: New Vec2d created\n",result);
-    PyObject* x = PyFloat_FromDouble(v.x);//T
-    PyObject* y = PyFloat_FromDouble(v.y);//T
-    PyTuple_SetItem(result, 0, x);
-    PyTuple_SetItem(result, 1, y);
+    PyObject* x_ = PyFloat_FromDouble(x);//T
+    PyObject* y_ = PyFloat_FromDouble(y);//T
+    PyTuple_SetItem(result, 0, x_);
+    PyTuple_SetItem(result, 1, y_);
     return result;
 }
-//vec2d operator+(const vec2d& a, const vec2d& b){ vec2d c; c.x=a.x+b.x; c.y=a.y+b.y; return c;}
 
 static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
     PyObject* mvobject = NULL;
@@ -97,11 +94,9 @@ static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
 
 static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     PyObject* list = PyList_New(0);
-    vec2d test[] = {{0,0},{1,0},{1+sqrt(2)/2,sqrt(2)/2},{1+sqrt(2)/2,1+sqrt(2)/2}};
-    const size_t test_size = sizeof(test)/sizeof(vec2d);
     printf("%x: New List of Vec2d created\n",list);
-    for (size_t i=0;i<test_size;i++){
-        PyObject* item = _vec2d(test[i]);
+    for (size_t i=0;i<sizeof(test_data)/sizeof(T);i+=2){
+        PyObject* item = _vec2d(test_data[i],test_data[i+1]);
         printf("%x: Passing Vec2d to list\n",item);
         PyList_Append(list, item);
     }
@@ -122,7 +117,6 @@ typedef struct {
 } MyObject;
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
-    T test[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
     view->ndim = 2;
     Py_ssize_t* shape = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
     shape[0]=4;
@@ -140,7 +134,7 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     if (!ptr)
         abort();
     for (int i=0; i<view->shape[0]*view->shape[1]; i++)
-        ptr[i] = test[i];
+        ptr[i] = test_data[i];
     view->readonly = 1;
     view->format = NULL;
     view->buf = (void*)ptr;
