@@ -189,6 +189,7 @@ add(matrix Eigen3::Eigen goopax_typedefs)
 add(cl-interop-1 OpenCL::OpenCL)
 add(cl-interop-2 OpenCL::OpenCL)
 add_subdirectory(cosmology)
+add(stl-datagroups)
 
 if (TARGET mandelbrot)
   target_compile_definitions(mandelbrot PUBLIC -DGOOPAX_ALLOW_DEPRECATED_DEVICES=1)
