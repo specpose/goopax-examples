@@ -22,7 +22,7 @@ void __delete(PyObject* X){
 
 typedef double T;
 static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
-static const size_t expected_vec_dims = 2;
+static const Py_ssize_t expected_vec_dims = 2;
 
 static void bufferUnderrun(Py_ssize_t expected_size, Py_ssize_t size_obtained){}
 static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
@@ -127,7 +127,8 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     view->shape = shape;
     view->strides = strides;
     view->suboffsets = NULL;
-    view->format = "d";//T
+    char _format[] = "d";
+    view->format = _format;//T
     view->itemsize = sizeof(T);
     view->len = view->shape[0]*view->shape[1]*view->itemsize;
     T* ptr = (T*)malloc(view->len);
