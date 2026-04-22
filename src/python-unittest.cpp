@@ -11,6 +11,43 @@ static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
         printf("(%f,%f)\n",_buffer[i],_buffer[i+1]);
 }
 
+#ifdef __cplusplus
+#include <boost/python/make_function.hpp>
+#include <boost/python/module.hpp>
+#include <boost/python/numpy.hpp>
+#include <boost/python/ptr.hpp>
+
+namespace py = boost::python;
+namespace np = boost::python::numpy;
+
+static void pynumpy_process_ndarray(np::ndarray& array) {
+    Py_ssize_t* c_strides = const_cast<Py_ssize_t*>(array.get_strides());
+    Py_ssize_t* c_shape = const_cast<Py_ssize_t*>(array.get_shape());
+    process(array.get_data(), c_strides, c_shape);
+}
+
+py::object pynumpy_test_ndarray() {
+    py::tuple shape = py::make_tuple(sizeof(test_data)/sizeof(T));
+    //py::tuple stride = py::make_tuple(8);
+    np::dtype dtype = np::dtype::get_builtin<T>();
+    np::ndarray tmp = np::zeros(shape, dtype);
+    for (std::size_t i = 0; i < sizeof(test_data)/sizeof(T); i++)
+        tmp[i] = test_data[i];
+    tmp = tmp.reshape(py::make_tuple(sizeof(test_data)/sizeof(T)/2,2));
+    py::object pynumpy = py::import("pynumpy");
+    printf("Calling process_ndarray\n");
+    pynumpy.attr("process_ndarray")(tmp);
+    return py::long_(0);
+}
+
+BOOST_PYTHON_MODULE(pynumpy)
+{
+    np::initialize();
+    py::def("process_ndarray", py::make_function(pynumpy_process_ndarray));
+    py::def("test_ndarray", pynumpy_test_ndarray, py::return_value_policy<py::return_by_value>());
+}
+#endif
+
 #define PY_SSIZE_T_CLEAN
 #define Py_LIMITED_API
 
@@ -250,14 +287,24 @@ PyMODINIT_FUNC PyInit_pylist(void){
 
 #if !MODULE_LIBRARY
 int main(){
+#ifdef __cplusplus
+    PyImport_AppendInittab("pynumpy", PyInit_pynumpy);
+#endif
     PyImport_AppendInittab("pylist", PyInit_pylist);
     Py_InitializeEx(0);
 
+    PyObject* unittest = PyImport_ImportModule("unittest");
+    PyObject* tcase = PyObject_GetAttrString(unittest,"FunctionTestCase");
+#ifdef __cplusplus
+    PyObject* pynumpy = PyImport_ImportModule("pynumpy");
+    PyObject* tn = PyObject_GetAttrString(pynumpy,"test_ndarray");
+    PyObject* case3_args = PyTuple_New(1);
+    PyTuple_SetItem(case3_args, 0, tn);
+    PyObject* case3 = PyObject_CallObject(tcase,case3_args);
+#endif
     PyObject* pylist = PyImport_ImportModule("pylist");
     PyObject* tl = PyObject_GetAttrString(pylist,"test_list");
     PyObject* tm = PyObject_GetAttrString(pylist,"test_memoryview");
-    PyObject* unittest = PyImport_ImportModule("unittest");
-    PyObject* tcase = PyObject_GetAttrString(unittest,"FunctionTestCase");
     PyObject* tsuite = PyObject_GetAttrString(unittest,"TestSuite");
     PyObject* tresult = PyObject_GetAttrString(unittest,"TestResult");
     if (!tresult)
@@ -269,7 +316,12 @@ int main(){
     PyTuple_SetItem(case2_args, 0, tm);
     PyObject* case2 = PyObject_CallObject(tcase,case2_args);
     PyObject* tsuite_args = PyTuple_New(1);
+#ifdef __cplusplus
+    PyObject* tests_tuple = PyTuple_New(3);
+    PyTuple_SetItem(tests_tuple,2,case3);
+#else
     PyObject* tests_tuple = PyTuple_New(2);
+#endif
     PyTuple_SetItem(tests_tuple,0,case1);
     PyTuple_SetItem(tests_tuple,1,case2);
     PyTuple_SetItem(tsuite_args,0,tests_tuple);
