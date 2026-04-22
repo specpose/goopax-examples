@@ -4,7 +4,6 @@
 typedef double T;
 static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
 
-static void bufferUnderrun(Py_ssize_t expected_size, Py_ssize_t size_obtained){}
 static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
     printf("shape=(%d,%d)\n",shape[0],shape[1]);
     T* _buffer = (T*)buffer;
@@ -86,9 +85,9 @@ static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
     PyObject* mvobject = NULL;
     PyArg_ParseTuple(args, "O", &mvobject);
     printf("%x: Retrieving memoryview from tuple\n",mvobject);
+    if (PyMemoryView_Check(mvobject)!=1)
+        abort();
     Py_buffer* view = PyMemoryView_GET_BUFFER(mvobject);
-    //Py_buffer* view = (Py_buffer*)mvobject;
-    //printf("shape=(%d,%d)\n",view->shape[0],view->shape[1]);
     process(view->buf,view->strides,view->shape);
     Py_INCREF(Py_None);
     return Py_None;
@@ -129,8 +128,8 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     view->shape = shape;
     view->strides = strides;
     view->suboffsets = NULL;
-    char _format[] = "d";
-    view->format = _format;//T
+    char _format[] = "d"; // T
+    view->format = _format;
     view->itemsize = sizeof(T);
     view->len = view->shape[0]*view->shape[1]*view->itemsize;
     T* ptr = (T*)malloc(view->len);
@@ -141,8 +140,7 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     view->readonly = 1;
     view->format = NULL;
     view->buf = (void*)ptr;
-    PyObject* _exporter = exporter;
-    view->obj = _exporter;
+    view->obj = exporter;
     return 0;
 };
 void release_buffer(PyObject *exporter, Py_buffer *view){
@@ -181,12 +179,7 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
 //    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, &MyObject_Type);
     Py_buffer view;
     if (PyObject_GetBuffer((PyObject*)myobj,&view,PyBUF_STRIDES)==0){
-        //printf("shape=(%d,%d)\n",view.shape[0],view.shape[1]);
         PyObject* mvobject = PyMemoryView_FromBuffer(&view);
-        if (PyMemoryView_Check(mvobject)!=1)
-            abort();
-        //Py_buffer* view_ = PyMemoryView_GET_BUFFER(mvobject);
-        //printf("shape=(%d,%d)\n",view_->shape[0],view_->shape[1]);
         PyObject* printMemoryview = PyObject_GetAttrString(self,"process_memoryview");
         PyObject* args = PyTuple_New(1);
         printf("%x: New tuple with memoryview created\n",args);
