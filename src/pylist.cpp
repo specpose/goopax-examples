@@ -1,6 +1,6 @@
 #define PY_SSIZE_T_CLEAN
 #if !DEBUG
-#define Py_LIMITED_API 1
+#define Py_LIMITED_API
 #endif
 #include <Python.h>
 #include <stdio.h>
