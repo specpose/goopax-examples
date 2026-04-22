@@ -1,9 +1,21 @@
+#include <Python.h>
+#include <stdio.h>
+
+typedef double T;
+static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
+
+static void bufferUnderrun(Py_ssize_t expected_size, Py_ssize_t size_obtained){}
+static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
+    printf("shape=(%d,%d)\n",shape[0],shape[1]);
+    T* _buffer = (T*)buffer;
+    for (Py_ssize_t i=0; i<shape[0]*shape[1]; i+=2)
+        printf("(%f,%f)\n",_buffer[i],_buffer[i+1]);
+}
+
 #define PY_SSIZE_T_CLEAN
 #if !DEBUG
 #define Py_LIMITED_API
 #endif
-#include <Python.h>
-#include <stdio.h>
 
 #if DEBUG
 #define Py_DECREF_bak Py_DECREF
@@ -20,17 +32,7 @@ void __delete(PyObject* X){
 #define Py_DECREF(X) __delete(X);
 #endif
 
-typedef double T;
-static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
 static const Py_ssize_t expected_vec_dims = 2;
-
-static void bufferUnderrun(Py_ssize_t expected_size, Py_ssize_t size_obtained){}
-static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
-    printf("shape=(%d,%d)\n",shape[0],shape[1]);
-    T* _buffer = (T*)buffer;
-    for (Py_ssize_t i=0; i<shape[0]*shape[1]; i+=2)
-        printf("(%f,%f)\n",_buffer[i],_buffer[i+1]);
-}
 
 static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
