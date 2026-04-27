@@ -116,7 +116,7 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
 typedef struct {
     PyObject_VAR_HEAD
 } MyObject;
-static char _format[] = "d"; // T
+static const char _format[] = "d"; // T
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
     view->ndim = 2;
@@ -129,8 +129,8 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     view->shape = shape;
     view->strides = strides;
     view->suboffsets = NULL;
-    char* _format = (char*)malloc(2*sizeof(char));
-    view->format = strcpy(_format, "d");
+    view->format = (char*)malloc(sizeof(_format));
+    strcpy(view->format, _format);
     view->itemsize = sizeof(T);
     view->len = view->shape[0]*view->shape[1]*view->itemsize;
     T* ptr = (T*)malloc(view->len);
