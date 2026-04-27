@@ -28,7 +28,6 @@ static void pynumpy_process_ndarray(np::ndarray& array) {
 
 py::object pynumpy_test_ndarray() {
     py::tuple shape = py::make_tuple(sizeof(test_data)/sizeof(T));
-    //py::tuple stride = py::make_tuple(8);
     np::dtype dtype = np::dtype::get_builtin<T>();
     np::ndarray tmp = np::zeros(shape, dtype);
     for (std::size_t i = 0; i < sizeof(test_data)/sizeof(T); i++)
@@ -185,10 +184,6 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
 void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
 };
-void myobj_dealloc(PyObject *self){
-    printf("Dealloc\n");
-    Py_TYPE(self)->tp_free(self);
-};
 PyObject *myobj_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
     printf("New\n");
     MyObject* buffy = (MyObject*)subtype->tp_alloc(subtype, 0);
@@ -215,34 +210,30 @@ int myobj_init(PyObject* self, PyObject* args, PyObject* kwds) {
         buffy->ptr[i] = test_data[i];
     return 0;
 }
-static PyBufferProcs Buf_Procs = {
-    &get_buffer,
-    &release_buffer
+static char _doc_string[] = "My objects";
+static PyType_Slot MyObject_Slots[] = {
+    {Py_tp_doc, _doc_string},
+    {Py_tp_new, (void*)myobj_new},
+    {Py_tp_init, (void*)myobj_init},
+    {Py_tp_free, (void*)myobj_free},
+    {Py_bf_getbuffer, (void*)get_buffer},
+    {Py_bf_releasebuffer, (void*)release_buffer},
+    {0, NULL}
 };
 static const char _name[] = "mymod.MyObject";
-static const char _doc_string[] = "My objects";
-static PyTypeObject MyObject_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    _name,       // .tp_name
-    sizeof(MyObject),     // .tp_basicsize
-    0,        // .tp_itemsize
-    (destructor)myobj_dealloc,        // .tp_dealloc
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    &Buf_Procs,     // .tp_as_buffer
-    Py_TPFLAGS_DEFAULT,      // .tp_flags
-    PyDoc_STR(_doc_string),        // .tp_doc
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    (initproc)myobj_init,      // .tp_init
-    PyType_GenericAlloc,      // .tp_alloc
-    (newfunc)myobj_new,       // .tp_new
-    (freefunc)myobj_free,       // .tp_free
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       // ?
+static PyType_Spec MyObject_Spec = {
+    .name = _name,
+    .basicsize = sizeof(MyObject),
+    .itemsize = 0,
+    .flags = Py_TPFLAGS_DEFAULT,
+    .slots = MyObject_Slots
 };
 
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
-    if (PyType_Ready(&MyObject_Type) < 0)
-        abort();
-    PyObject* myobj = PyObject_CallObject((PyObject*)&MyObject_Type,NULL);  // .tp_new
+    PyTypeObject *MyType = (PyTypeObject*)PyType_FromSpec(&MyObject_Spec);
+    PyObject* myobj = PyObject_CallObject((PyObject*)MyType,NULL);  // .tp_new
+//    MyObject* myobj = PyObject_New(MyObject,MyType);
+//    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, MyType);
     Py_buffer view;
     if (PyObject_GetBuffer((PyObject*)myobj,&view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
         PyObject* mvobject = PyMemoryView_FromBuffer(&view);
