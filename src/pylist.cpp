@@ -160,15 +160,22 @@ static PyBufferProcs Buf_Procs = {
 };
 static PyTypeObject MyObject_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "mymod.MyObject",
-    .tp_basicsize = sizeof(MyObject),
-//    .tp_itemsize = 0,
+    "mymod.MyObject",       // .tp_name
+    sizeof(MyObject),     // .tp_basicsize
+    0,        // .tp_itemsize
 //    .tp_dealloc = (destructor)myobj_dealloc,
-    .tp_as_buffer = &Buf_Procs,
-    .tp_doc = PyDoc_STR("My objects"),
-//    .tp_init = 0,
-//    .tp_alloc = 0,
+    0,      // .tp_dealloc
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+//    .tp_as_buffer = &Buf_Procs,
+    &Buf_Procs,     // .tp_as_buffer
+    0,
+    PyDoc_STR("My objects"),        // .tp_doc
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,      // .tp_init
+    0,      // .tp_alloc
 //    .tp_new = myobj_new,
+    0,       // .tp_new
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       // ?
 };
 #endif
 

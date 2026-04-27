@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.15...4.1)
 project(goopax_examples LANGUAGES C CXX)
 
 if (CMAKE_VERSION VERSION_LESS "3.20")
-  set (CMAKE_CXX_STANDARD 17)
+  set (CMAKE_CXX_STANDARD 20)
 else()
-  set (CMAKE_CXX_STANDARD 17)
+  set (CMAKE_CXX_STANDARD 23)
 endif()
 
 # Disabling cuda-interop example by default because of compatibility issues between cuda and recent gcc versions
@@ -75,13 +75,13 @@ endif()
 
 if (APPLE)
   enable_language(OBJCXX)
-  set (CMAKE_OBJCXX_STANDARD 17)
+  set (CMAKE_OBJCXX_STANDARD 20)
   include(cmake/common.cmake)
 endif()
 
 if (WITH_CUDA)
   enable_language(CUDA)
-  set (CMAKE_CUDA_STANDARD 17)
+  set (CMAKE_CUDA_STANDARD 20)
 endif()
 
 add_subdirectory(common/draw)
