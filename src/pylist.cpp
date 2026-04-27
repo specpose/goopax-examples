@@ -114,7 +114,7 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
 
 #if DEBUG
 typedef struct {
-    PyObject_HEAD
+    PyObject_VAR_HEAD
 } MyObject;
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
@@ -149,11 +149,22 @@ void release_buffer(PyObject *exporter, Py_buffer *view){
     free((void*)view->strides);
     free((void*)view->buf);
 };
-/*void myobj_dealloc(PyObject *self){ printf("Dealloc\n"); };
-PyObject *myobj_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
+/*PyObject *myobj_alloc(PyTypeObject *self, Py_ssize_t nitems){
     printf("Alloc\n");
-    return NULL;
+    PyObject* ptr = (PyObject*)malloc(sizeof(MyObject_Type));
+    return ptr;
 };*/
+void myobj_dealloc(PyObject *self){
+    printf("Dealloc\n");
+    Py_TYPE(self)->tp_free(self);
+};
+PyObject *myobj_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
+    printf("New\n");
+    PyObject* ptr = subtype->tp_alloc(subtype, 1);
+    return ptr;
+}
+void myobj_free(void *self) { printf("Free\n"); }
+int myobj_init(PyObject* self, PyObject* args, PyObject* kwds) { printf("Init\n"); return 0; }
 static PyBufferProcs Buf_Procs = {
     &get_buffer,
     &release_buffer
@@ -163,27 +174,25 @@ static PyTypeObject MyObject_Type = {
     "mymod.MyObject",       // .tp_name
     sizeof(MyObject),     // .tp_basicsize
     0,        // .tp_itemsize
-//    .tp_dealloc = (destructor)myobj_dealloc,
-    0,      // .tp_dealloc
+    (destructor)myobj_dealloc,        // .tp_dealloc
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-//    .tp_as_buffer = &Buf_Procs,
     &Buf_Procs,     // .tp_as_buffer
-    0,
+    Py_TPFLAGS_DEFAULT,      // .tp_flags
     PyDoc_STR("My objects"),        // .tp_doc
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0,      // .tp_init
-    0,      // .tp_alloc
-//    .tp_new = myobj_new,
-    0,       // .tp_new
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       // ?
+    (initproc)myobj_init,      // .tp_init
+    PyType_GenericAlloc,      // .tp_alloc
+    (newfunc)myobj_new,       // .tp_new
+    (freefunc)myobj_free,       // .tp_free
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       // ?
 };
 #endif
 
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
 #if DEBUG
-    PyType_Ready(&MyObject_Type);
-    MyObject* myobj = PyObject_New(MyObject,&MyObject_Type);
-//    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, &MyObject_Type);
+    if (PyType_Ready(&MyObject_Type) < 0)
+        abort();
+    PyObject* myobj = PyObject_CallObject((PyObject*)&MyObject_Type,NULL);  // .tp_new
     Py_buffer view;
     if (PyObject_GetBuffer((PyObject*)myobj,&view,PyBUF_STRIDES)==0){
         PyObject* mvobject = PyMemoryView_FromBuffer(&view);
