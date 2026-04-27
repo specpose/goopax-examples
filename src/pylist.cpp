@@ -115,58 +115,67 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
 #if DEBUG
 typedef struct {
     PyObject_VAR_HEAD
+    Py_ssize_t* shape;
+    Py_ssize_t* strides;
+    char* format;
+    T* ptr;
 } MyObject;
 static const char _format[] = "d"; // T
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
     view->ndim = 2;
-    Py_ssize_t* shape = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
+    Py_ssize_t* shape = ((MyObject*)exporter)->shape;
     shape[0]=4;
     shape[1]=2;
-    Py_ssize_t* strides = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
+    Py_ssize_t* strides = ((MyObject*)exporter)->strides;
     strides[0]=16;
     strides[1]=8;
     view->shape = shape;
     view->strides = strides;
     view->suboffsets = NULL;
-    view->format = (char*)malloc(sizeof(_format));
+    view->format = ((MyObject*)exporter)->format;
     strcpy(view->format, _format);
     view->itemsize = sizeof(T);
     view->len = view->shape[0]*view->shape[1]*view->itemsize;
-    T* ptr = (T*)malloc(view->len);
-    if (!ptr)
-        abort();
-    for (int i=0; i<view->shape[0]*view->shape[1]; i++)
-        ptr[i] = test_data[i];
+    T* ptr = ((MyObject*)exporter)->ptr;
     view->readonly = 1;
-    view->format = NULL;
     view->buf = (void*)ptr;
     view->obj = exporter;
     return 0;
 };
 void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
-    free((void*)view->shape);
-    free((void*)view->strides);
-    free((void*)view->format);
-    free((void*)view->buf);
 };
-/*PyObject *myobj_alloc(PyTypeObject *self, Py_ssize_t nitems){
-    printf("Alloc\n");
-    PyObject* ptr = (PyObject*)malloc(sizeof(MyObject_Type));
-    return ptr;
-};*/
 void myobj_dealloc(PyObject *self){
     printf("Dealloc\n");
     Py_TYPE(self)->tp_free(self);
 };
 PyObject *myobj_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
     printf("New\n");
-    PyObject* ptr = subtype->tp_alloc(subtype, 1);
-    return ptr;
+    MyObject* buffy = (MyObject*)subtype->tp_alloc(subtype, 0);
+    if (buffy != NULL) {
+        buffy->shape = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
+        buffy->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
+        buffy->format = (char*)malloc(sizeof(_format));
+        buffy->ptr = (T*)malloc(sizeof(test_data)*sizeof(T));
+    }
+    return (PyObject*)buffy;
 }
-void myobj_free(void *self) { printf("Free\n"); }
-int myobj_init(PyObject* self, PyObject* args, PyObject* kwds) { printf("Init\n"); return 0; }
+void myobj_free(void *self) {
+    printf("Free\n");
+    MyObject* buffy = (MyObject*)self;
+    free((void*)buffy->shape);
+    free((void*)buffy->strides);
+    free((void*)buffy->format);
+    free((void*)buffy->ptr);
+}
+int myobj_init(PyObject* self, PyObject* args, PyObject* kwds) {
+    printf("Init\n");
+    MyObject* buffy = (MyObject*)self;
+    for (size_t i=0; i<sizeof(test_data)/sizeof(T); i++)
+        buffy->ptr[i] = test_data[i];
+    return 0;
+}
 static PyBufferProcs Buf_Procs = {
     &get_buffer,
     &release_buffer
