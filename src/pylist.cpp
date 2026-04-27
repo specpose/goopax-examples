@@ -12,9 +12,7 @@ static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
 }
 
 #define PY_SSIZE_T_CLEAN
-#if !DEBUG
 #define Py_LIMITED_API
-#endif
 
 #if DEBUG
 #define Py_DECREF_bak Py_DECREF
@@ -112,7 +110,6 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     return PyLong_FromLong(0);
 }
 
-#if DEBUG
 typedef struct {
     PyObject_VAR_HEAD
     Py_ssize_t* shape;
@@ -199,10 +196,8 @@ static PyTypeObject MyObject_Type = {
     (freefunc)myobj_free,       // .tp_free
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0       // ?
 };
-#endif
 
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
-#if DEBUG
     if (PyType_Ready(&MyObject_Type) < 0)
         abort();
     PyObject* myobj = PyObject_CallObject((PyObject*)&MyObject_Type,NULL);  // .tp_new
@@ -218,7 +213,6 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
         PyBuffer_Release(&view);
     }
     PyObject_Del((void*)myobj);
-#endif
     return PyLong_FromLong(0);
 }
 
