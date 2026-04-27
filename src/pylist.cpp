@@ -129,7 +129,8 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     view->shape = shape;
     view->strides = strides;
     view->suboffsets = NULL;
-    view->format = _format;
+    char* _format = (char*)malloc(2*sizeof(char));
+    view->format = strcpy(_format, "d");
     view->itemsize = sizeof(T);
     view->len = view->shape[0]*view->shape[1]*view->itemsize;
     T* ptr = (T*)malloc(view->len);
@@ -147,6 +148,7 @@ void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
     free((void*)view->shape);
     free((void*)view->strides);
+    free((void*)view->format);
     free((void*)view->buf);
 };
 /*PyObject *myobj_alloc(PyTypeObject *self, Py_ssize_t nitems){
