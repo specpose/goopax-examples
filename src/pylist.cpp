@@ -116,6 +116,7 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
 typedef struct {
     PyObject_VAR_HEAD
 } MyObject;
+static char _format[] = "d"; // T
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
     view->ndim = 2;
@@ -128,7 +129,6 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     view->shape = shape;
     view->strides = strides;
     view->suboffsets = NULL;
-    char _format[] = "d"; // T
     view->format = _format;
     view->itemsize = sizeof(T);
     view->len = view->shape[0]*view->shape[1]*view->itemsize;
@@ -169,16 +169,18 @@ static PyBufferProcs Buf_Procs = {
     &get_buffer,
     &release_buffer
 };
+static const char _name[] = "mymod.MyObject";
+static const char _doc_string[] = "My objects";
 static PyTypeObject MyObject_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "mymod.MyObject",       // .tp_name
+    _name,       // .tp_name
     sizeof(MyObject),     // .tp_basicsize
     0,        // .tp_itemsize
     (destructor)myobj_dealloc,        // .tp_dealloc
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     &Buf_Procs,     // .tp_as_buffer
     Py_TPFLAGS_DEFAULT,      // .tp_flags
-    PyDoc_STR("My objects"),        // .tp_doc
+    PyDoc_STR(_doc_string),        // .tp_doc
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     (initproc)myobj_init,      // .tp_init
     PyType_GenericAlloc,      // .tp_alloc
