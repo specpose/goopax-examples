@@ -120,24 +120,28 @@ typedef struct {
 static const char _format[] = "d"; // T
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
-    view->ndim = 2;
-    Py_ssize_t* shape = ((MyObject*)exporter)->shape;
-    shape[0]=4;
-    shape[1]=2;
-    Py_ssize_t* strides = ((MyObject*)exporter)->strides;
-    strides[0]=16;
-    strides[1]=8;
-    view->shape = shape;
-    view->strides = strides;
-    view->suboffsets = NULL;
-    view->format = ((MyObject*)exporter)->format;
-    strcpy(view->format, _format);
-    view->itemsize = sizeof(T);
-    view->len = view->shape[0]*view->shape[1]*view->itemsize;
-    T* ptr = ((MyObject*)exporter)->ptr;
-    view->readonly = 1;
-    view->buf = (void*)ptr;
-    view->obj = exporter;
+    if ((flags & (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) == (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) {
+        view->ndim = 2;
+        Py_ssize_t* shape = ((MyObject*)exporter)->shape;
+        shape[0]=4;
+        shape[1]=2;
+        Py_ssize_t* strides = ((MyObject*)exporter)->strides;
+        strides[0]=16;
+        strides[1]=8;
+        view->shape = shape;
+        view->strides = strides;
+        view->suboffsets = NULL;
+        view->format = ((MyObject*)exporter)->format;
+        strcpy(view->format, _format);
+        view->itemsize = sizeof(T);
+        view->len = view->shape[0]*view->shape[1]*view->itemsize;
+        T* ptr = ((MyObject*)exporter)->ptr;
+        view->readonly = 1;
+        view->buf = (void*)ptr;
+        view->obj = exporter;
+    } else {
+        abort();
+    }
     return 0;
 };
 void release_buffer(PyObject *exporter, Py_buffer *view){
@@ -202,7 +206,7 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
         abort();
     PyObject* myobj = PyObject_CallObject((PyObject*)&MyObject_Type,NULL);  // .tp_new
     Py_buffer view;
-    if (PyObject_GetBuffer((PyObject*)myobj,&view,PyBUF_STRIDES)==0){
+    if (PyObject_GetBuffer((PyObject*)myobj,&view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
         PyObject* mvobject = PyMemoryView_FromBuffer(&view);
         PyObject* printMemoryview = PyObject_GetAttrString(self,"process_memoryview");
         PyObject* args = PyTuple_New(1);
