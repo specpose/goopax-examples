@@ -91,6 +91,7 @@ static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
     return Py_None;
 }
 
+#if !MODULE_LIBRARY
 static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     PyObject* list = PyList_New(0);
     printf("%x: New List of Vec2d created\n",list);
@@ -219,12 +220,15 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
     PyObject_Del((void*)myobj);
     return PyLong_FromLong(0);
 }
+#endif
 
 static PyMethodDef pylist_methods[] = {
     {"process_list", pylist_process_list, METH_VARARGS, ""},
     {"process_memoryview", pylist_process_memoryview, METH_VARARGS, ""},
+#if !MODULE_LIBRARY
     {"test_list", pylist_test_list, METH_NOARGS, ""},
     {"test_memoryview", pylist_test_memoryview, METH_NOARGS, ""},
+#endif
     {NULL, NULL, 0, NULL}
 };
 
@@ -244,6 +248,7 @@ PyMODINIT_FUNC PyInit_pylist(void){
     return PyModule_Create(&pylist_module);
 }
 
+#if !MODULE_LIBRARY
 int main(){
     PyImport_AppendInittab("pylist", PyInit_pylist);
     Py_InitializeEx(0);
@@ -297,6 +302,7 @@ int main(){
 #endif
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
 }
+#endif
 
 #if DEBUG
 #undef Py_DECREF
