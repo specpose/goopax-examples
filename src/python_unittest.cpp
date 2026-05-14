@@ -153,26 +153,27 @@ typedef struct {
     Py_ssize_t* strides;
     char* format;
     T* ptr;
-} MyObject;
+} CustomBuffer;
 static const char _format[] = "d"; // T
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
     if ((flags & (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) == (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) {
         view->ndim = 2;
-        Py_ssize_t* shape = ((MyObject*)exporter)->shape;
+        Py_ssize_t* shape = ((CustomBuffer*)exporter)->shape;
         shape[0]=4;
         shape[1]=2;
-        Py_ssize_t* strides = ((MyObject*)exporter)->strides;
+        Py_ssize_t* strides = ((CustomBuffer*)exporter)->strides;
         strides[0]=16;
         strides[1]=8;
         view->shape = shape;
         view->strides = strides;
         view->suboffsets = NULL;
-        view->format = ((MyObject*)exporter)->format;
+        view->format = ((CustomBuffer*)exporter)->format;
         strcpy(view->format, _format);
+        printf("view->itemsize = %d",view->itemsize);
         view->itemsize = sizeof(T);
         view->len = view->shape[0]*view->shape[1]*view->itemsize;
-        T* ptr = ((MyObject*)exporter)->ptr;
+        T* ptr = ((CustomBuffer*)exporter)->ptr;
         view->readonly = 1;
         view->buf = (void*)ptr;
         view->obj = exporter;
@@ -184,9 +185,9 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
 void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
 };
-PyObject *myobj_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
+PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
     printf("New\n");
-    MyObject* buffy = (MyObject*)subtype->tp_alloc(subtype, 0);
+    CustomBuffer* buffy = (CustomBuffer*)subtype->tp_alloc(subtype, 0);
     if (buffy != NULL) {
         buffy->shape = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
         buffy->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
@@ -195,44 +196,68 @@ PyObject *myobj_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
     }
     return (PyObject*)buffy;
 }
-void myobj_free(void *self) {
+void CustomBuffer_free(void *self) {
     printf("Free\n");
-    MyObject* buffy = (MyObject*)self;
+    CustomBuffer* buffy = (CustomBuffer*)self;
     free((void*)buffy->shape);
     free((void*)buffy->strides);
     free((void*)buffy->format);
     free((void*)buffy->ptr);
 }
-int myobj_init(PyObject* self, PyObject* args, PyObject* kwds) {
+int CustomBuffer_init(PyObject* self, PyObject* args, PyObject* kwds) {
     printf("Init\n");
-    MyObject* buffy = (MyObject*)self;
+    CustomBuffer* buffy = (CustomBuffer*)self;
     for (size_t i=0; i<sizeof(test_data)/sizeof(T); i++)
         buffy->ptr[i] = test_data[i];
     return 0;
 }
 static char _doc_string[] = "My objects";
-static PyType_Slot MyObject_Slots[] = {
+static PyType_Slot CustomBuffer_Slots[] = {
     {Py_tp_doc, _doc_string},
-    {Py_tp_new, (void*)myobj_new},
-    {Py_tp_init, (void*)myobj_init},
-    {Py_tp_free, (void*)myobj_free},
+    {Py_tp_new, (void*)CustomBuffer_new},
+    {Py_tp_init, (void*)CustomBuffer_init},
+    {Py_tp_free, (void*)CustomBuffer_free},
     {Py_bf_getbuffer, (void*)get_buffer},
     {Py_bf_releasebuffer, (void*)release_buffer},
     {0, NULL}
 };
-static const char _name[] = "mymod.MyObject";
-static PyType_Spec MyObject_Spec = {
-    .name = _name,
-    .basicsize = sizeof(MyObject),
-    .itemsize = 0,
+static const char CustomBuffer_name[] = "CustomBuffer";
+static const char CustomBuffer_doc_string[] = "Aligned Buffer with Buffer Protocol";
+/*static PyType_Spec CustomBuffer_Spec = {
+    .name = CustomBuffer_name,
+    .basicsize = sizeof(CustomBuffer),
+    .itemsize = (Py_ssize_t)sizeof(T),
     .flags = Py_TPFLAGS_DEFAULT,
-    .slots = MyObject_Slots
+    .slots = CustomBuffer_Slots
+};*/
+static PyBufferProcs CustomBuffer_Procs = {&get_buffer, &release_buffer};
+static PyTypeObject CustomBuffer_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0) // typing.Callable
+    CustomBuffer_name,
+    sizeof(CustomBuffer),
+    (Py_ssize_t)sizeof(T),
+    0, //(destructor)CustomBuffer_dealloc,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, //(ternaryfunc)CustomBuffer_call,
+    0, 0, 0,
+    &CustomBuffer_Procs,
+    Py_TPFLAGS_DEFAULT,
+    PyDoc_STR(CustomBuffer_doc_string),
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    (initproc)CustomBuffer_init,
+    PyType_GenericAlloc,
+    (newfunc)CustomBuffer_new,
+    (freefunc)CustomBuffer_free,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
-    PyTypeObject *MyType = (PyTypeObject*)PyType_FromSpec(&MyObject_Spec);
-    PyObject* myobj = PyObject_CallObject((PyObject*)MyType,NULL);  // .tp_new
-//    MyObject* myobj = PyObject_New(MyObject,MyType);
+    //PyTypeObject *MyType = (PyTypeObject*)PyType_FromSpec(&CustomBuffer_Spec);
+    if (PyType_Ready(&CustomBuffer_Type) < 0)
+        abort();
+    PyObject* myobj = PyObject_CallObject((PyObject*)&CustomBuffer_Type, NULL);  // .tp_new
+//    CustomBuffer* myobj = PyObject_New(CustomBuffer,MyType);
 //    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, MyType);
     Py_buffer view;
     if (PyObject_GetBuffer((PyObject*)myobj,&view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
