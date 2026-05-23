@@ -147,19 +147,11 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     return PyLong_FromLong(0);
 }
 
-std::array<Py_ssize_t, PyBUF_MAX_NDIM> make_strides(const std::array<Py_ssize_t, PyBUF_MAX_NDIM>* shape, const Py_ssize_t itemsize) {
-    auto strides = std::array<Py_ssize_t, PyBUF_MAX_NDIM>{};
-    std::copy(begin(*shape), end(*shape), begin(strides));
-    Py_ssize_t previous_stridesize = itemsize;
-    std::for_each(std::rbegin(strides), std::rend(strides), [&previous_stridesize](auto& current){
-        if (current != 0) {
-            auto shape = current;
-            current = previous_stridesize;
-            previous_stridesize = shape * previous_stridesize;
-        }
-    });
-    return strides;
-};
+#include <goopax>
+#include <goopax_extra/types.hpp>
+static Py_ssize_t queue_variables = 3;
+static Py_ssize_t user_variables = 1;
+#include "gpu_reshaper.hpp"
 typedef struct {
     PyObject_VAR_HEAD
     Py_ssize_t* shape;
@@ -180,14 +172,7 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
         view->obj = exporter;
 
         //Get itemsize from format
-        PyObject* struct_m = PyImport_ImportModule("struct");
-        PyObject* calcsize = PyObject_GetAttrString(struct_m,"calcsize");
-        PyObject* calcsize_args = PyTuple_New(1);
-        PyTuple_SetItem(calcsize_args, 0, PyUnicode_FromString(view->format));
-        PyObject* itemsize = (PyObject*)PyObject_CallObject(calcsize, calcsize_args);
-        if (PyNumber_Check(itemsize)!=1)
-            abort();
-        view->itemsize = PyNumber_AsSsize_t(itemsize,NULL);
+        view->itemsize = itemsize(view->format);
 
         //Get ndim from shape
         Py_ssize_t ndim = 0;
@@ -200,7 +185,7 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
 
         //Calculate strides from shape and itemsize
         view->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
-        auto strides = make_strides((std::array<Py_ssize_t, PyBUF_MAX_NDIM>*)view->shape, view->itemsize);
+        auto strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*view->shape), view->itemsize);
         for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
             view->strides[i] = strides[i];
 
