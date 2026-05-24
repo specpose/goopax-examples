@@ -147,10 +147,11 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     return PyLong_FromLong(0);
 }
 
-#include <goopax>
-#include <goopax_extra/types.hpp>
+static const char _format[] = "d"; // T
 static Py_ssize_t queue_variables = 3;
 static Py_ssize_t user_variables = 1;
+#include <goopax>
+#include <goopax_extra/types.hpp>
 #include "gpu_reshaper.hpp"
 typedef struct {
     PyObject_VAR_HEAD
@@ -158,7 +159,6 @@ typedef struct {
     char* format;
     T* ptr;
 } CustomBuffer;
-static const char _format[] = "d"; // T
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
     if ((flags & (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) == (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) {
@@ -174,22 +174,17 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
         //Get itemsize from format
         view->itemsize = itemsize(view->format);
 
-        //Get ndim from shape
-        Py_ssize_t ndim = 0;
-        for (std::size_t i = 0; i <PyBUF_MAX_NDIM; ++i)
-            if (!view->shape[i]==0)
-                ++ndim;
-            else
-                break;
-        view->ndim = ndim;
-
         //Calculate strides from shape and itemsize
+        /*  Hack: Allocation should be in CustomBuffer_new  */
         view->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
         auto strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*view->shape), view->itemsize);
         for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
             view->strides[i] = strides[i];
 
-        view->len = view->shape[0]*view->strides[0]/view->itemsize;
+        //Get ndim from shape
+        view->ndim = ndim(view->shape);
+
+        view->len = len(view->itemsize, view->shape);
 
     } else {
         abort();
@@ -205,8 +200,34 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
     CustomBuffer* buffy = (CustomBuffer*)subtype->tp_alloc(subtype, 0);
     if (buffy != NULL) {
         buffy->shape = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
-        buffy->format = (char*)malloc(sizeof(_format));
-        buffy->ptr = (T*)malloc(sizeof(test_data)*sizeof(T));
+        const char* format = NULL;
+        Py_ssize_t format_length = 0;
+        PyObject* shape = NULL;
+        if (PyArg_ParseTuple(args, "s#O", &format, &format_length, &shape)) {
+            buffy->format = (char*)malloc(sizeof(format_length));
+            strcpy(buffy->format, format);
+            const auto _itemsize = itemsize(format);
+            if (PyTuple_Check(shape) != 1)
+                abort();
+            const auto ndim = PyTuple_Size(shape);
+            for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
+                buffy->shape[i] = 0;
+            /*  Hack: Needs parse for buffer allocation   */
+            Py_ssize_t shape_prod = 1;
+            for (std::size_t i = 0; i<ndim; ++i) {
+                if (PyNumber_Check(PyTuple_GetItem(shape, i)) != 1)
+                    abort;
+                const auto value = PyNumber_AsSsize_t(PyTuple_GetItem(shape, i), NULL);
+                shape_prod *= value;
+                buffy->shape[i] = value;
+            }
+            buffy->ptr = (T*)malloc(shape_prod*_itemsize);
+            for (size_t i=0; i<shape_prod; ++i)
+                buffy->ptr[i] = 0;
+
+        } else {
+            abort();
+        }
     }
     return (PyObject*)buffy;
 }
@@ -220,13 +241,6 @@ void CustomBuffer_free(void *self) {
 int CustomBuffer_init(PyObject* self, PyObject* args, PyObject* kwds) {
     printf("Init\n");
     CustomBuffer* buffy = (CustomBuffer*)self;
-    for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
-        buffy->shape[i] = 0;
-    buffy->shape[0]=4;//override
-    buffy->shape[1]=2;//override
-    strcpy(buffy->format, _format);
-    for (size_t i=0; i<sizeof(test_data)/sizeof(T); i++)
-        buffy->ptr[i] = test_data[i];
     return 0;
 }
 static char _doc_string[] = "My objects";
@@ -274,7 +288,14 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
     //PyTypeObject *MyType = (PyTypeObject*)PyType_FromSpec(&CustomBuffer_Spec);
     if (PyType_Ready(&CustomBuffer_Type) < 0)
         abort();
-    PyObject* myobj = PyObject_CallObject((PyObject*)&CustomBuffer_Type, NULL);  // .tp_new
+    PyObject* custom_buffer_args = PyTuple_New(2);
+    PyTuple_SetItem(custom_buffer_args, 0, PyUnicode_FromString(_format));
+    PyObject* shape = PyTuple_New(2);
+    PyTuple_SetItem(shape, 0, PyLong_FromLong(4));
+    PyTuple_SetItem(shape, 1, PyLong_FromLong(2));
+    PyTuple_SetItem(custom_buffer_args, 1, shape);
+    PyObject_Print(custom_buffer_args,stdout,Py_PRINT_RAW);
+    PyObject* myobj = PyObject_CallObject((PyObject*)&CustomBuffer_Type, custom_buffer_args);  // .tp_new
 //    CustomBuffer* myobj = PyObject_New(CustomBuffer,MyType);
 //    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, MyType);
     Py_buffer view;
