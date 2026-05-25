@@ -30,7 +30,7 @@ py::object pynumpy_test_ndarray() {
     printf("pynumpy_test_ndarray\n");
     py::object gpu_buffer = py::import("gpu_buffer");
     py::tuple buffy_shape = py::make_tuple(4,2);
-    py::object buffy = gpu_buffer.attr("CustomBuffer")(py::str(_format), buffy_shape);
+    py::object buffy = gpu_buffer.attr("CustomBuffer")(py::str(_format), buffy_shape, 4);
     Py_buffer* view = new Py_buffer;
     const auto buffy_ptr = (PyObject*)buffy.ptr();
     Py_INCREF(buffy_ptr);
@@ -161,12 +161,13 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
     PyObject* get_buffer = PyImport_ImportModule("gpu_buffer");
     PyObject* custom_buffer = PyObject_GetAttrString(get_buffer,"CustomBuffer");
-    PyObject* custom_buffer_args = PyTuple_New(2);
+    PyObject* custom_buffer_args = PyTuple_New(3);
     PyTuple_SetItem(custom_buffer_args, 0, PyUnicode_FromString(_format));
     PyObject* shape = PyTuple_New(2);
     PyTuple_SetItem(shape, 0, PyLong_FromLong(4));
     PyTuple_SetItem(shape, 1, PyLong_FromLong(2));
     PyTuple_SetItem(custom_buffer_args, 1, shape);
+    PyTuple_SetItem(custom_buffer_args, 2, PyLong_FromLong(4));
     PyObject* myobj = PyObject_CallObject(custom_buffer, custom_buffer_args);  // .tp_new
 //    CustomBuffer* myobj = PyObject_New(CustomBuffer,MyType);
 //    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, MyType);

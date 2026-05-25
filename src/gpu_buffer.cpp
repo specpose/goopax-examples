@@ -55,11 +55,12 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
     CustomBuffer* buffy = (CustomBuffer*)subtype->tp_alloc(subtype, 0);
     if (buffy != NULL) {
         buffy->shape = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
+        int alignment = 4;
         const char* format = NULL;
         Py_ssize_t format_length = 0;
         PyObject* shape = NULL;
-        if (PyArg_ParseTuple(args, "s#O", &format, &format_length, &shape)) {
-            buffy->format = (char*)malloc(sizeof(format_length));
+        if (PyArg_ParseTuple(args, "s#Oi", &format, &format_length, &shape, &alignment)) {
+            buffy->format = (char*)malloc(format_length);
             strcpy(buffy->format, format);
             const auto _itemsize = itemsize(format);
             if (PyTuple_Check(shape) != 1)
@@ -76,9 +77,9 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
                 shape_prod *= value;
                 buffy->shape[i] = value;
             }
-            buffy->ptr = (T*)malloc(shape_prod*_itemsize);
-            for (Py_ssize_t i=0; i<shape_prod; ++i)
-                buffy->ptr[i] = 0;
+            buffy->ptr = (T*)aligned_alloc(alignment,shape_prod*_itemsize);
+            //for (Py_ssize_t i=0; i<shape_prod; ++i)
+            //    buffy->ptr[i] = 0;
 
         } else {
             abort();
