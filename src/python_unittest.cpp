@@ -25,16 +25,31 @@ static void pynumpy_process_ndarray(np::ndarray& array) {
     process(array.get_data(), c_strides, c_shape);
 }
 
+static const char _format[] = "d"; // T
 py::object pynumpy_test_ndarray() {
-    py::tuple shape = py::make_tuple(sizeof(test_data)/sizeof(T));
+    printf("pynumpy_test_ndarray\n");
+    py::object gpu_buffer = py::import("gpu_buffer");
+    py::tuple buffy_shape = py::make_tuple(4,2);
+    py::object buffy = gpu_buffer.attr("CustomBuffer")(py::str(_format), buffy_shape);
+    Py_buffer* view = new Py_buffer;
+    const auto buffy_ptr = (PyObject*)buffy.ptr();
+    Py_INCREF(buffy_ptr);
+    if (PyObject_GetBuffer(buffy_ptr,view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
+    //py::tuple nd_shape = py::make_tuple(sizeof(test_data)/sizeof(T));
     np::dtype dtype = np::dtype::get_builtin<T>();
-    np::ndarray tmp = np::zeros(shape, dtype);
+    //np::ndarray tmp = np::zeros(nd_shape, dtype);
+    np::ndarray tmp = np::from_data(view->buf, dtype,py::make_tuple(sizeof(test_data)/sizeof(T)), py::make_tuple(sizeof(double)),py::object());
     for (std::size_t i = 0; i < sizeof(test_data)/sizeof(T); i++)
         tmp[i] = test_data[i];
     tmp = tmp.reshape(py::make_tuple(sizeof(test_data)/sizeof(T)/2,2));
     py::object pynumpy = py::import("pynumpy");
     printf("Calling process_ndarray\n");
     pynumpy.attr("process_ndarray")(tmp);
+
+    PyBuffer_Release(view);
+    delete view;
+    }
+    printf("end: pynumpy_test_ndarray\n");
     return py::long_(0);
 }
 
@@ -45,9 +60,6 @@ BOOST_PYTHON_MODULE(pynumpy)
     py::def("test_ndarray", pynumpy_test_ndarray, py::return_value_policy<py::return_by_value>());
 }
 #endif
-
-#define PY_SSIZE_T_CLEAN
-#define Py_LIMITED_API
 
 #if DEBUG
 #define Py_DECREF_bak Py_DECREF
@@ -146,7 +158,6 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     return PyLong_FromLong(0);
 }
 
-static const char _format[] = "d"; // T
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
     PyObject* get_buffer = PyImport_ImportModule("gpu_buffer");
     PyObject* custom_buffer = PyObject_GetAttrString(get_buffer,"CustomBuffer");

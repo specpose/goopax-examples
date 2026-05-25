@@ -1,6 +1,8 @@
 #include <goopax>
 #include <goopax_extra/types.hpp>
 #include <Python.h>
+#define PY_SSIZE_T_CLEAN
+#define Py_LIMITED_API
 static Py_ssize_t queue_variables = 3;
 static Py_ssize_t user_variables = 1;
 #include "gpu_reshaper.hpp"
