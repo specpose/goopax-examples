@@ -5,7 +5,7 @@
 #define Py_LIMITED_API
 static Py_ssize_t queue_variables = 3;
 static Py_ssize_t user_variables = 1;
-#include "gpu_reshaper.hpp"
+#include "gpu_buffer.hpp"
 typedef double T;
 typedef struct {
     PyObject_VAR_HEAD
