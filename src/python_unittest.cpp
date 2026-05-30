@@ -27,7 +27,7 @@ static void pynumpy_process_ndarray(np::ndarray& array) {
 
 static const char _format[] = "d"; // T
 py::object pynumpy_test_ndarray() {
-    printf("pynumpy_test_ndarray\n");
+    printf("begin: pynumpy_test_ndarray\n");
     py::object gpu_buffer = py::import("gpu_buffer");
     py::tuple buffy_shape = py::make_tuple(4,2);
     py::object buffy = gpu_buffer.attr("CustomBuffer")(py::str(_format), buffy_shape, 4);
@@ -43,7 +43,6 @@ py::object pynumpy_test_ndarray() {
         tmp[i] = test_data[i];
     tmp = tmp.reshape(py::make_tuple(sizeof(test_data)/sizeof(T)/2,2));
     py::object pynumpy = py::import("pynumpy");
-    printf("Calling process_ndarray\n");
     pynumpy.attr("process_ndarray")(tmp);
 
     PyBuffer_Release(view);
@@ -81,9 +80,7 @@ static const Py_ssize_t expected_vec_dims = 2;
 static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
     PyArg_ParseTuple(args, "O", &list);
-    printf("%x: Retrieving list from tuple\n",list);
     Py_ssize_t shape_1 = PyList_Size(list);
-    printf("list is size %d\n",shape_1);
     T* buffer;
     buffer = (T*)malloc(expected_vec_dims*sizeof(T)*shape_1);
     for(Py_ssize_t i=0; i<shape_1; i++){
@@ -94,7 +91,6 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
             abort();
         for (Py_ssize_t j=0; j<shape_2; j++){
             PyObject* e = PyTuple_GetItem(item,j);
-            printf("%x: Retrieving element %d from vec2d\n",e,j);
             buffer[shape_2*i+j]=PyFloat_AsDouble(e);
             printf("%f,\n",buffer[shape_2*i+j]);//T
         }
@@ -129,7 +125,6 @@ PyObject* _vec2d(T x, T y){
 static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
     PyObject* mvobject = NULL;
     PyArg_ParseTuple(args, "O", &mvobject);
-    printf("%x: Retrieving memoryview from tuple\n",mvobject);
     if (PyMemoryView_Check(mvobject)!=1)
         abort();
     Py_buffer* view = PyMemoryView_GET_BUFFER(mvobject);
@@ -140,25 +135,24 @@ static PyObject* pylist_process_memoryview(PyObject* self, PyObject* args){
 
 #if !MODULE_LIBRARY
 static PyObject* pylist_test_list(PyObject* self, PyObject* what){
+    printf("begin: pylist_test_list\n");
     PyObject* list = PyList_New(0);
-    printf("%x: New List of Vec2d created\n",list);
     for (size_t i=0;i<sizeof(test_data)/sizeof(T);i+=2){
         PyObject* item = _vec2d(test_data[i],test_data[i+1]);
-        printf("%x: Passing Vec2d to list\n",item);
         PyList_Append(list, item);
     }
     PyObject* printList = PyObject_GetAttrString(self,"process_list");
     PyObject* args = PyTuple_New(1);
-    printf("%x: New tuple with list created\n",args);
-    printf("%x: Passing list to tuple\n",list);
     PyTuple_SetItem(args, 0, list);
     PyObject* result = PyObject_CallObject(printList, args);
     Py_DECREF(args);
     Py_DECREF(printList);
+    printf("end: pylist_test_list\n");
     return PyLong_FromLong(0);
 }
 
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
+    printf("begin: pylist_test_memoryview\n");
     PyObject* get_buffer = PyImport_ImportModule("gpu_buffer");
     PyObject* custom_buffer = PyObject_GetAttrString(get_buffer,"CustomBuffer");
     PyObject* custom_buffer_args = PyTuple_New(3);
@@ -176,13 +170,12 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
         PyObject* mvobject = PyMemoryView_FromBuffer(&view);
         PyObject* printMemoryview = PyObject_GetAttrString(self,"process_memoryview");
         PyObject* args = PyTuple_New(1);
-        printf("%x: New tuple with memoryview created\n",args);
-        printf("%x: Passing memoryview to tuple\n",mvobject);
         PyTuple_SetItem(args, 0, mvobject);
         PyObject* result = PyObject_CallObject(printMemoryview, args);
         PyBuffer_Release(&view);
     }
     PyObject_Del((void*)myobj);
+    printf("end: pylist_test_memoryview\n");
     return PyLong_FromLong(0);
 }
 #endif
