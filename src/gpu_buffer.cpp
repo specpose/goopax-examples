@@ -9,6 +9,7 @@ static Py_ssize_t user_variables = 1;
 typedef double T;
 typedef struct {
     PyObject_VAR_HEAD
+    Py_ssize_t* padding;
     Py_ssize_t* shape;
     char* format;
     T* ptr;
@@ -54,6 +55,7 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
     printf("New\n");
     CustomBuffer* buffy = (CustomBuffer*)subtype->tp_alloc(subtype, 0);
     if (buffy != NULL) {
+        buffy->padding = (Py_ssize_t*)malloc(sizeof(Py_ssize_t));
         buffy->shape = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
         int alignment = 4;
         const char* format = NULL;
@@ -77,7 +79,8 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
                 shape_prod *= value;
                 buffy->shape[i] = value;
             }
-            buffy->ptr = (T*)aligned_alloc(alignment,shape_prod*_itemsize);
+            *buffy->padding = alignment - (shape_prod * _itemsize % alignment);
+            buffy->ptr = (T*)aligned_alloc(alignment,shape_prod*_itemsize+*buffy->padding);
             //for (Py_ssize_t i=0; i<shape_prod; ++i)
             //    buffy->ptr[i] = 0;
 
