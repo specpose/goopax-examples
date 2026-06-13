@@ -11,17 +11,18 @@ typedef struct {
     PyObject_VAR_HEAD
     Py_ssize_t* padding;
     Py_ssize_t* shape;
+    Py_ssize_t* strides;
     char* format;
     T* ptr;
 } CustomBuffer;
-int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
+int get_buffer(PyObject *exporter, Py_buffer *view, int flags){ // TODO: internal struct exposed to consumer
     printf("GetBuffer\n");
     view->readonly = 0;
     view->suboffsets = NULL;
     T* ptr = ((CustomBuffer*)exporter)->ptr;
     view->buf = (void*)ptr;
     view->itemsize = itemsize(((CustomBuffer*)exporter)->format);
-    Py_ssize_t* _shape = ((CustomBuffer*)exporter)->shape;// HACK: Accessible from numpy
+    Py_ssize_t* _shape = ((CustomBuffer*)exporter)->shape;
     if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT) {
         view->format = ((CustomBuffer*)exporter)->format;
     } else {
@@ -29,11 +30,7 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     }
     if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES) {
         printf("PyBUF_STRIDES\n");
-        /*  Hack: Allocation should be in CustomBuffer_new  */
-        view->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
-        auto strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*_shape), view->itemsize);
-        for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
-            view->strides[i] = strides[i];
+        view->strides = ((CustomBuffer*)exporter)->strides;
     } else {
         view->strides = NULL;
     }
@@ -57,9 +54,6 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
 };
 void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
-    if (view->strides != NULL)
-        free((void*)view->strides);
-    view->strides = NULL;
 };
 PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
     printf("New\n");
@@ -89,6 +83,10 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
                 shape_prod *= value;
                 buffy->shape[i] = value;
             }
+            buffy->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
+            auto _strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*buffy->shape), _itemsize);
+            for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
+                buffy->strides[i] = _strides[i];
             *buffy->padding = alignment - (shape_prod * _itemsize % alignment);
             buffy->ptr = (T*)aligned_alloc(alignment,shape_prod*_itemsize+*buffy->padding);
             //for (Py_ssize_t i=0; i<shape_prod; ++i)
@@ -104,6 +102,7 @@ void CustomBuffer_free(void *self) {
     printf("Free\n");
     CustomBuffer* buffy = (CustomBuffer*)self;
     free((void*)buffy->shape);
+    free((void*)buffy->strides);
     free((void*)buffy->format);
     free((void*)buffy->ptr);
 }
