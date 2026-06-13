@@ -61,6 +61,29 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
     if (buffy != NULL) {
         buffy->padding = (Py_ssize_t*)malloc(sizeof(Py_ssize_t));
         buffy->shape = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
+        buffy->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
+        buffy->format = NULL;
+        buffy->ptr = NULL;
+    }
+    return (PyObject*)buffy;
+}
+void CustomBuffer_free(void *self) {
+    printf("Free\n");
+    CustomBuffer* buffy = (CustomBuffer*)self;
+    free((void*)buffy->padding);
+    free((void*)buffy->shape);
+    free((void*)buffy->strides);
+    if (buffy->format != NULL)
+        free((void*)buffy->format);
+    buffy->format = NULL;
+    if (buffy->ptr != NULL)
+        free((void*)buffy->ptr);
+    buffy->ptr = NULL;
+}
+int CustomBuffer_init(PyObject* self, PyObject* args, PyObject* kwds) {
+    printf("Init\n");
+    CustomBuffer* buffy = (CustomBuffer*)self;
+    if (buffy != NULL) {
         int alignment = 4;
         const char* format = NULL;
         Py_ssize_t format_length = 0;
@@ -74,7 +97,6 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
             const auto ndim = PyTuple_Size(shape);
             for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
                 buffy->shape[i] = 0;
-            /*  Hack: Needs parse for buffer allocation   */
             Py_ssize_t shape_prod = 1;
             for (Py_ssize_t i = 0; i<ndim; ++i) {
                 if (PyNumber_Check(PyTuple_GetItem(shape, i)) != 1)
@@ -83,8 +105,7 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
                 shape_prod *= value;
                 buffy->shape[i] = value;
             }
-            buffy->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
-            auto _strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*buffy->shape), _itemsize);
+            const auto _strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*buffy->shape), _itemsize);
             for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
                 buffy->strides[i] = _strides[i];
             *buffy->padding = alignment - (shape_prod * _itemsize % alignment);
@@ -96,19 +117,6 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
             abort();
         }
     }
-    return (PyObject*)buffy;
-}
-void CustomBuffer_free(void *self) {
-    printf("Free\n");
-    CustomBuffer* buffy = (CustomBuffer*)self;
-    free((void*)buffy->shape);
-    free((void*)buffy->strides);
-    free((void*)buffy->format);
-    free((void*)buffy->ptr);
-}
-int CustomBuffer_init(PyObject* self, PyObject* args, PyObject* kwds) {
-    printf("Init\n");
-    CustomBuffer* buffy = (CustomBuffer*)self;
     return 0;
 }
 static char _doc_string[] = "My objects";
