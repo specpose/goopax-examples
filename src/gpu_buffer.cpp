@@ -16,40 +16,50 @@ typedef struct {
 } CustomBuffer;
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){
     printf("GetBuffer\n");
-    /*  TODO: Implement memoryview cast */
-    //if ((flags & (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) == (PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)) {
-        //init
-        view->readonly = 0;
-        view->suboffsets = NULL;
-        view->shape = ((CustomBuffer*)exporter)->shape;
+    view->readonly = 0;
+    view->suboffsets = NULL;
+    T* ptr = ((CustomBuffer*)exporter)->ptr;
+    view->buf = (void*)ptr;
+    view->itemsize = itemsize(((CustomBuffer*)exporter)->format);
+    Py_ssize_t* _shape = ((CustomBuffer*)exporter)->shape;// HACK: Accessible from numpy
+    if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT) {
         view->format = ((CustomBuffer*)exporter)->format;
-        T* ptr = ((CustomBuffer*)exporter)->ptr;
-        view->buf = (void*)ptr;
-        view->obj = exporter;
-
-        //Get itemsize from format
-        view->itemsize = itemsize(view->format);
-
-        //Calculate strides from shape and itemsize
+    } else {
+        view->format = NULL;
+    }
+    if ((flags & PyBUF_STRIDES) == PyBUF_STRIDES) {
+        printf("PyBUF_STRIDES\n");
         /*  Hack: Allocation should be in CustomBuffer_new  */
         view->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
-        auto strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*view->shape), view->itemsize);
+        auto strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*_shape), view->itemsize);
         for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
             view->strides[i] = strides[i];
-
-        //Get ndim from shape
-        view->ndim = ndim(view->shape);
-
-        view->len = len(view->itemsize, view->shape);
-
-    //} else {
-    //    abort();
-    //}
-    return 0;
+    } else {
+        view->strides = NULL;
+    }
+    if ((flags & PyBUF_ND) == PyBUF_ND) {
+        printf("PyBUF_ND\n");
+        view->shape = _shape;
+        view->ndim = ndim(_shape);
+        view->len = len(view->itemsize, _shape);
+        view->obj = exporter;
+        return 0;
+    } else if ((flags & PyBUF_SIMPLE) == PyBUF_SIMPLE) {
+        printf("PyBUF_SIMPLE\n");
+        view->shape = NULL;
+        view->ndim = 1;
+        view->len = len(view->itemsize, _shape);
+        view->obj = exporter;
+        return 0;
+    }
+    view->obj = NULL;
+    return -1;
 };
 void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
-    free((void*)view->strides);
+    if (view->strides != NULL)
+        free((void*)view->strides);
+    view->strides = NULL;
 };
 PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
     printf("New\n");
