@@ -132,7 +132,7 @@ int main()
     } );
     std::cout << global_memory_a << " should be 102607" << std::endl;
 
-    auto dev = goopax::default_device(goopax::env_ALL);
+    auto dev = goopax::default_device(goopax::env_CPU);
     auto arg_b = goopax::buffer<T>(dev,std::size(DATA),DATA.data());
     auto k = goopax::kernel(dev,[&group_size](goopax::resource<T>& DATA)->goopax::gather_add<T>{
         auto it_ = gpx_datagroups<T>{std::begin(DATA),std::end(DATA),group_size};
