@@ -9,7 +9,6 @@ static Py_ssize_t user_variables = 1;
 typedef double T;
 typedef struct {
     PyObject_VAR_HEAD
-    Py_ssize_t* padding;
     Py_ssize_t* shape;
     Py_ssize_t* strides;
     char* format;
@@ -59,7 +58,6 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
     printf("New\n");
     CustomBuffer* buffy = (CustomBuffer*)subtype->tp_alloc(subtype, 0);
     if (buffy != NULL) {
-        buffy->padding = (Py_ssize_t*)malloc(sizeof(Py_ssize_t));
         buffy->shape = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
         buffy->strides = (Py_ssize_t*)malloc(PyBUF_MAX_NDIM*sizeof(Py_ssize_t));
         buffy->format = NULL;
@@ -70,7 +68,6 @@ PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds
 void CustomBuffer_free(void *self) {
     printf("Free\n");
     CustomBuffer* buffy = (CustomBuffer*)self;
-    free((void*)buffy->padding);
     free((void*)buffy->shape);
     free((void*)buffy->strides);
     if (buffy->format != NULL)
@@ -108,8 +105,7 @@ int CustomBuffer_init(PyObject* self, PyObject* args, PyObject* kwds) {
             const auto _strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*buffy->shape), _itemsize);
             for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
                 buffy->strides[i] = _strides[i];
-            *buffy->padding = alignment - (shape_prod * _itemsize % alignment);
-            buffy->ptr = (T*)aligned_alloc(alignment,shape_prod*_itemsize+*buffy->padding);
+            buffy->ptr = (T*)aligned_alloc(alignment,(shape_prod*_itemsize +  alignment - 1) & ~(alignment - 1));
             //for (Py_ssize_t i=0; i<shape_prod; ++i)
             //    buffy->ptr[i] = 0;
 
