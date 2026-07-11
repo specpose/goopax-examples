@@ -2,6 +2,25 @@
 
 #include "gpu_buffer.cpp"
 static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
+static const char _format[] = "d"; // T
+static const std::size_t _alignment = 4;
+static const std::array<std::size_t, 2> _shape = {4,2};
+
+PyObject* _construct_CustomBuffer(decltype(_format), decltype(_shape) shape, decltype(_alignment) alignment){
+    PyObject* get_buffer = PyImport_ImportModule("gpu_buffer");
+    PyObject* custom_buffer = PyObject_GetAttrString(get_buffer,"CustomBuffer");
+    PyObject* custom_buffer_args = PyTuple_New(3);
+    PyTuple_SetItem(custom_buffer_args, 0, PyUnicode_FromString(_format));
+    PyObject* s = PyTuple_New(std::size(shape));
+    for(std::size_t i=0; i<std::size(shape); ++i)
+        PyTuple_SetItem(s, i, PyLong_FromLong(shape.at(i)));
+    PyTuple_SetItem(custom_buffer_args, 1, s);
+    PyTuple_SetItem(custom_buffer_args, 2, PyLong_FromLong(alignment));
+    PyObject* myobj = PyObject_CallObject(custom_buffer, custom_buffer_args);  // .tp_new
+    //CustomBuffer* myobj = PyObject_New(CustomBuffer,MyType);
+    //PyObject* myobj_ = PyObject_Init((PyObject*)myobj, MyType);
+    return myobj;
+}
 
 static void process(void* buffer, Py_ssize_t* strides, Py_ssize_t* shape){
     printf("shape=(%d,%d)\n",shape[0],shape[1]);
@@ -25,16 +44,12 @@ static void pynumpy_process_ndarray(np::ndarray& array) {
     process(array.get_data(), c_strides, c_shape);
 }
 
-static const char _format[] = "d"; // T
 py::object pynumpy_test_ndarray() {
     printf("begin: pynumpy_test_ndarray\n");
-    py::object gpu_buffer = py::import("gpu_buffer");
-    py::tuple buffy_shape = py::make_tuple(4,2);
-    py::object buffy = gpu_buffer.attr("CustomBuffer")(py::str(_format), buffy_shape, 4);
+    PyObject* buffy = _construct_CustomBuffer(_format, _shape, _alignment);
     Py_buffer* view = new Py_buffer;
-    const auto buffy_ptr = (PyObject*)buffy.ptr();
-    Py_INCREF(buffy_ptr);
-    if (PyObject_GetBuffer(buffy_ptr,view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
+    Py_INCREF(buffy);
+    if (PyObject_GetBuffer(buffy,view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
     //py::tuple nd_shape = py::make_tuple(sizeof(test_data)/sizeof(T));
     np::dtype dtype = np::dtype::get_builtin<T>();
     //np::ndarray tmp = np::zeros(nd_shape, dtype);
@@ -153,18 +168,7 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
 
 static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
     printf("begin: pylist_test_memoryview\n");
-    PyObject* get_buffer = PyImport_ImportModule("gpu_buffer");
-    PyObject* custom_buffer = PyObject_GetAttrString(get_buffer,"CustomBuffer");
-    PyObject* custom_buffer_args = PyTuple_New(3);
-    PyTuple_SetItem(custom_buffer_args, 0, PyUnicode_FromString(_format));
-    PyObject* shape = PyTuple_New(2);
-    PyTuple_SetItem(shape, 0, PyLong_FromLong(4));
-    PyTuple_SetItem(shape, 1, PyLong_FromLong(2));
-    PyTuple_SetItem(custom_buffer_args, 1, shape);
-    PyTuple_SetItem(custom_buffer_args, 2, PyLong_FromLong(4));
-    PyObject* myobj = PyObject_CallObject(custom_buffer, custom_buffer_args);  // .tp_new
-//    CustomBuffer* myobj = PyObject_New(CustomBuffer,MyType);
-//    PyObject* myobj_ = PyObject_Init((PyObject*)myobj, MyType);
+    PyObject* myobj = _construct_CustomBuffer(_format, _shape, _alignment);
     Py_buffer view;
     if (PyObject_GetBuffer((PyObject*)myobj,&view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
         PyObject* mvobject = PyMemoryView_FromBuffer(&view);
