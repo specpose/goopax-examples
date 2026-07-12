@@ -1,6 +1,20 @@
 #include <stdio.h>
 
 #include "gpu_buffer.cpp"
+#if DEBUG
+#define Py_DECREF_bak Py_DECREF
+void __delete(PyObject* X){
+    //int* refcnt = (int*)(X);
+    //*refcnt = 0;
+    Py_DECREF_bak(X);
+    if (Py_REFCNT(X) != 0)
+        printf("%d\n",Py_REFCNT(X));
+    if (Py_REFCNT(X) < 0)
+        abort();
+}
+#undef Py_DECREF
+#define Py_DECREF(X) __delete(X);
+#endif
 static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
 static const char _format[] = "d"; // T
 static const std::size_t _alignment = 4;
@@ -48,7 +62,6 @@ py::object pynumpy_test_ndarray() {
     printf("begin: pynumpy_test_ndarray\n");
     PyObject* buffy = _construct_CustomBuffer(_format, _shape, _alignment);
     Py_buffer* view = new Py_buffer;
-    Py_INCREF(buffy);
     if (PyObject_GetBuffer(buffy,view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
     //py::tuple nd_shape = py::make_tuple(sizeof(test_data)/sizeof(T));
     np::dtype dtype = np::dtype::get_builtin<T>();
@@ -63,6 +76,7 @@ py::object pynumpy_test_ndarray() {
     PyBuffer_Release(view);
     delete view;
     }
+    PyObject_Del((void*)buffy);
     printf("end: pynumpy_test_ndarray\n");
     return py::long_(0);
 }
@@ -73,21 +87,6 @@ BOOST_PYTHON_MODULE(pynumpy)
     py::def("process_ndarray", py::make_function(pynumpy_process_ndarray));
     py::def("test_ndarray", pynumpy_test_ndarray, py::return_value_policy<py::return_by_value>());
 }
-#endif
-
-#if DEBUG
-#define Py_DECREF_bak Py_DECREF
-void __delete(PyObject* X){
-    //int* refcnt = (int*)(X);
-    //*refcnt = 0;
-    Py_DECREF_bak(X);
-    if (Py_REFCNT(X) != 0)
-        printf("%d\n",Py_REFCNT(X));
-    if (Py_REFCNT(X) < 0)
-        abort();
-}
-#undef Py_DECREF
-#define Py_DECREF(X) __delete(X);
 #endif
 
 static const Py_ssize_t expected_vec_dims = 2;
@@ -111,7 +110,6 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
         }
         Py_DECREF(item);//1
     }
-    Py_DECREF(list);
     Py_ssize_t* shape = (Py_ssize_t*)malloc(2*sizeof(Py_ssize_t));
     shape[0]=shape_1;
     shape[1]=expected_vec_dims;
@@ -160,7 +158,6 @@ static PyObject* pylist_test_list(PyObject* self, PyObject* what){
     PyObject* args = PyTuple_New(1);
     PyTuple_SetItem(args, 0, list);
     PyObject* result = PyObject_CallObject(printList, args);
-    Py_DECREF(args);
     Py_DECREF(printList);
     printf("end: pylist_test_list\n");
     return PyLong_FromLong(0);
@@ -217,19 +214,30 @@ int main(){
     PyImport_AppendInittab("pynumpy", PyInit_pynumpy);
 #endif
     PyImport_AppendInittab("pylist", PyInit_pylist);
-    Py_InitializeEx(0);
+#if DEBUG
+    PyInitConfig *config = PyInitConfig_Create();
+    PyInitConfig_SetInt(config, "dev_mode", 1);
+    Py_InitializeFromInitConfig(config);
+    PyInitConfig_Free(config);
+#else
+    Py_Initialize();
+#endif
+    PyGILState_STATE gstate = PyGILState_Ensure();
 
     PyObject* unittest = PyImport_ImportModule("unittest");
     PyObject* tcase = PyObject_GetAttrString(unittest,"FunctionTestCase");
 #ifdef __cplusplus
     PyObject* pynumpy = PyImport_ImportModule("pynumpy");
+    //PyObject* tn = PyObject_CallMethodNoArgs(pynumpy,PyUnicode_FromString("test_ndarray"));
     PyObject* tn = PyObject_GetAttrString(pynumpy,"test_ndarray");
     PyObject* case3_args = PyTuple_New(1);
     PyTuple_SetItem(case3_args, 0, tn);
     PyObject* case3 = PyObject_CallObject(tcase,case3_args);
 #endif
     PyObject* pylist = PyImport_ImportModule("pylist");
+    //PyObject* tl = PyObject_CallMethodNoArgs(pylist,PyUnicode_FromString("test_list"));
     PyObject* tl = PyObject_GetAttrString(pylist,"test_list");
+    //PyObject* tm = PyObject_CallMethodNoArgs(pylist,PyUnicode_FromString("test_memoryview"));
     PyObject* tm = PyObject_GetAttrString(pylist,"test_memoryview");
     PyObject* tsuite = PyObject_GetAttrString(unittest,"TestSuite");
     PyObject* tresult = PyObject_GetAttrString(unittest,"TestResult");
@@ -272,6 +280,8 @@ int main(){
     int f = PyList_Size(PyObject_GetAttrString(result,"failures"));
     int e = PyList_Size(PyObject_GetAttrString(result,"errors"));
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
+
+    PyGILState_Release(gstate);
 #if DEBUG
     if (Py_FinalizeEx() < 0)
         abort();
@@ -279,6 +289,7 @@ int main(){
     Py_Finalize();
 #endif
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
+    //return 0;
 }
 #endif
 
