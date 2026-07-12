@@ -7,8 +7,8 @@ static const std::size_t _alignment = 4;
 static const std::array<std::size_t, 2> _shape = {4,2};
 
 PyObject* _construct_CustomBuffer(decltype(_format), decltype(_shape) shape, decltype(_alignment) alignment){
-    PyObject* get_buffer = PyImport_ImportModule("gpu_buffer");
-    PyObject* custom_buffer = PyObject_GetAttrString(get_buffer,"CustomBuffer");
+    PyObject* gpu_buffer = PyImport_ImportModule("gpu_buffer");
+    PyObject* custom_buffer = PyObject_GetAttrString(gpu_buffer,"CustomBuffer");
     PyObject* custom_buffer_args = PyTuple_New(3);
     PyTuple_SetItem(custom_buffer_args, 0, PyUnicode_FromString(_format));
     PyObject* s = PyTuple_New(std::size(shape));

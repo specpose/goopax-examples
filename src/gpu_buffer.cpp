@@ -54,6 +54,11 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){ // TODO: interna
 void release_buffer(PyObject *exporter, Py_buffer *view){
     printf("ReleaseBuffer\n");
 };
+PyObject* hello(PyObject* self, PyObject* empty){
+    printf("Hello from CustomBuffer!\n");
+    Py_INCREF(Py_None);
+    return Py_None;
+}
 PyObject *CustomBuffer_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
     printf("New\n");
     CustomBuffer* buffy = (CustomBuffer*)subtype->tp_alloc(subtype, 0);
@@ -115,7 +120,13 @@ int CustomBuffer_init(PyObject* self, PyObject* args, PyObject* kwds) {
     }
     return 0;
 }
-static char _doc_string[] = "My objects";
+static const char CustomBuffer_name[] = "CustomBuffer";
+static const char CustomBuffer_doc_string[] = "Aligned Buffer with Buffer Protocol";
+static PyMethodDef CustomBuffer_Methods[] = {
+    {"hello", hello, METH_NOARGS, ""},
+    {NULL, NULL, 0, NULL}
+};
+/*static char _doc_string[] = "My objects";
 static PyType_Slot CustomBuffer_Slots[] = {
     {Py_tp_doc, _doc_string},
     {Py_tp_new, (void*)CustomBuffer_new},
@@ -125,9 +136,7 @@ static PyType_Slot CustomBuffer_Slots[] = {
     {Py_bf_releasebuffer, (void*)release_buffer},
     {0, NULL}
 };
-static const char CustomBuffer_name[] = "CustomBuffer";
-static const char CustomBuffer_doc_string[] = "Aligned Buffer with Buffer Protocol";
-/*static PyType_Spec CustomBuffer_Spec = {
+static PyType_Spec CustomBuffer_Spec = {
     .name = CustomBuffer_name,
     .basicsize = sizeof(CustomBuffer),
     .itemsize = (Py_ssize_t)sizeof(T),
@@ -147,7 +156,9 @@ static PyTypeObject CustomBuffer_Type = {
     &CustomBuffer_Procs,
     Py_TPFLAGS_DEFAULT,
     PyDoc_STR(CustomBuffer_doc_string),
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    CustomBuffer_Methods,
+    0, 0, 0, 0, 0, 0, 0,
     (initproc)CustomBuffer_init,
     PyType_GenericAlloc,
     (newfunc)CustomBuffer_new,
