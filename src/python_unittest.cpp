@@ -212,9 +212,9 @@ PyMODINIT_FUNC PyInit_pylist(void){
 
 #if !MODULE_LIBRARY
 int main(){
+    PyImport_AppendInittab("gpu_buffer", PyInit_gpu_buffer);
 #ifdef __cplusplus
     PyImport_AppendInittab("pynumpy", PyInit_pynumpy);
-    PyImport_AppendInittab("gpu_buffer", PyInit_gpu_buffer);
 #endif
     PyImport_AppendInittab("pylist", PyInit_pylist);
     Py_InitializeEx(0);
