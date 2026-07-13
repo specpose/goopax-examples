@@ -18,8 +18,7 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){ // TODO: interna
     printf("GetBuffer\n");
     view->readonly = 0;
     view->suboffsets = NULL;
-    T* ptr = ((CustomBuffer*)exporter)->ptr;
-    view->buf = (void*)ptr;
+    view->buf = (void*)((CustomBuffer*)exporter)->ptr;
     view->itemsize = itemsize(((CustomBuffer*)exporter)->format);
     Py_ssize_t* _shape = ((CustomBuffer*)exporter)->shape;
     if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT) {
@@ -38,14 +37,14 @@ int get_buffer(PyObject *exporter, Py_buffer *view, int flags){ // TODO: interna
         view->shape = _shape;
         view->ndim = ndim(_shape);
         view->len = len(view->itemsize, _shape);
-        view->obj = exporter;
+        view->obj = NULL;
         return 0;
     } else if ((flags & PyBUF_SIMPLE) == PyBUF_SIMPLE) {
         printf("PyBUF_SIMPLE\n");
         view->shape = NULL;
         view->ndim = 1;
         view->len = len(view->itemsize, _shape);
-        view->obj = exporter;
+        view->obj = NULL;
         return 0;
     }
     view->obj = NULL;

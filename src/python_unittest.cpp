@@ -175,6 +175,10 @@ static PyObject* pylist_test_memoryview(PyObject* self, PyObject* what){
         PyObject* result = PyObject_CallObject(printMemoryview, args);
         PyBuffer_Release(&view);
     }
+    printf("test: repeated GetBuffer\n");
+    if (PyObject_GetBuffer((PyObject*)myobj,&view, PyBUF_C_CONTIGUOUS | PyBUF_FORMAT)==0){
+        PyBuffer_Release(&view);
+    }
     PyObject_Del((void*)myobj);
     printf("end: pylist_test_memoryview\n");
     return PyLong_FromLong(0);
