@@ -1,6 +1,17 @@
 #include <stdio.h>
+#include <goopax_extra/types.hpp>
 
+//#define PY_SSIZE_T_CLEAN
+//#define Py_LIMITED_API 0x030C0000
+
+typedef double T;
 #include "gpu_buffer.cpp"
+static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
+static const char _format[2] = "d"; // T
+static const std::size_t _alignment = 4;
+static const std::array<std::size_t, 2> _shape = {4,2};
+static const Py_ssize_t expected_vec_dims = 2;
+
 #if DEBUG
 #define Py_DECREF_bak Py_DECREF
 void __delete(PyObject* X){
@@ -15,10 +26,6 @@ void __delete(PyObject* X){
 #undef Py_DECREF
 #define Py_DECREF(X) __delete(X);
 #endif
-static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
-static const char _format[] = "d"; // T
-static const std::size_t _alignment = 4;
-static const std::array<std::size_t, 2> _shape = {4,2};
 
 PyObject* _construct_CustomBuffer(decltype(_format), decltype(_shape) shape, decltype(_alignment) alignment){
     PyObject* gpu_buffer = PyImport_ImportModule("gpu_buffer");
@@ -89,8 +96,6 @@ BOOST_PYTHON_MODULE(pynumpy)
 }
 #endif
 
-static const Py_ssize_t expected_vec_dims = 2;
-
 static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     PyObject* list = NULL;
     PyArg_ParseTuple(args, "O", &list);
@@ -99,14 +104,14 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     buffer = (T*)malloc(expected_vec_dims*sizeof(T)*shape_1);
     for(Py_ssize_t i=0; i<shape_1; i++){
         PyObject* item = PyList_GetItem(list,i);
-        printf("%x: Retrieving vec2d from list\n",item);
+        //printf("%x: Retrieving vec2d from list\n",item);
         Py_ssize_t shape_2 = PyTuple_Size(item);
         if (shape_2 != expected_vec_dims)
             abort();
         for (Py_ssize_t j=0; j<shape_2; j++){
             PyObject* e = PyTuple_GetItem(item,j);
             buffer[shape_2*i+j]=PyFloat_AsDouble(e);
-            printf("%f,\n",buffer[shape_2*i+j]);//T
+            //printf("%f,\n",buffer[shape_2*i+j]);//T
         }
         Py_DECREF(item);//1
     }
@@ -127,7 +132,7 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
 
 PyObject* _vec2d(T x, T y){
     PyObject* result = PyTuple_New(expected_vec_dims);
-    printf("%x: New Vec2d created\n",result);
+    //printf("%x: New Vec2d created\n",result);
     PyObject* x_ = PyFloat_FromDouble(x);//T
     PyObject* y_ = PyFloat_FromDouble(y);//T
     PyTuple_SetItem(result, 0, x_);

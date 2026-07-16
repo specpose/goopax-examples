@@ -1,3 +1,7 @@
+#include <Python.h>
+#include <goopax>
+typedef double T; // FIX: compilation as module
+
 /*  Goopax  */
 bool test_dev(unsigned int env) {
     goopax::goopax_device d = goopax::default_device(static_cast<goopax::envmode>(env));
@@ -28,9 +32,7 @@ Py_ssize_t itemsize(std::string format){
     PyObject* struct_m = PyImport_ImportModule("struct");
     PyObject* calcsize = PyObject_GetAttrString(struct_m,"calcsize");
     PyObject* calcsize_args = PyTuple_New(1);
-    char _python_format[2] = "";
-    strcpy(_python_format,format.c_str());
-    PyTuple_SetItem(calcsize_args, 0, PyUnicode_FromString(_python_format));
+    PyTuple_SetItem(calcsize_args, 0, PyUnicode_FromString(format.c_str()));
     PyObject* itemsize = (PyObject*)PyObject_CallObject(calcsize, calcsize_args);
     if (PyNumber_Check(itemsize)!=1)
         abort();
