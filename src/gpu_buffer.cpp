@@ -4,7 +4,7 @@ typedef struct {
     Py_ssize_t* shape;
     Py_ssize_t* strides;
     char* format;
-    T* ptr; // TODO: void*
+    void* ptr;
 } CustomBuffer;
 int get_buffer(PyObject *exporter, Py_buffer *view, int flags){ // TODO: internal struct exposed to consumer
     //printf("GetBuffer\n");
@@ -99,9 +99,9 @@ int CustomBuffer_init(PyObject* self, PyObject* args, PyObject* kwds) {
             const auto _strides = make_strides(reinterpret_cast<std::array<Py_ssize_t, PyBUF_MAX_NDIM>&>(*buffy->shape), _itemsize);
             for (size_t i=0; i<PyBUF_MAX_NDIM; i++)
                 buffy->strides[i] = _strides[i];
-            buffy->ptr = (T*)aligned_alloc(alignment,(shape_prod*_itemsize +  alignment - 1) & ~(alignment - 1)); // TODO: cast from format
+            buffy->ptr = (void*)aligned_alloc(alignment,(shape_prod*_itemsize +  alignment - 1) & ~(alignment - 1));
             //for (Py_ssize_t i=0; i<shape_prod; ++i)
-            //    buffy->ptr[i] = 0;
+            //    buffy->ptr[i] = 0; // TODO: map struct format to c type
 
         } else {
             abort();

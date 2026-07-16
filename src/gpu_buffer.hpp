@@ -1,6 +1,5 @@
 #include <Python.h>
 #include <goopax>
-typedef double T; // FIX: compilation as module
 
 /*  Goopax  */
 bool test_dev(unsigned int env) {

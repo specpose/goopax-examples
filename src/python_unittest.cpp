@@ -3,9 +3,9 @@
 
 //#define PY_SSIZE_T_CLEAN
 //#define Py_LIMITED_API 0x030C0000
+#include "gpu_buffer.cpp"
 
 typedef double T;
-#include "gpu_buffer.cpp"
 static const T test_data[] = {0,0,1,0,1+sqrt(2)/2,sqrt(2)/2,1+sqrt(2)/2,1+sqrt(2)/2};
 static const char _format[2] = "d"; // T
 static const std::size_t _alignment = 4;
@@ -127,7 +127,6 @@ static PyObject* pylist_process_list(PyObject* self, PyObject* args){
     free(buffer);
     Py_INCREF(Py_None);
     return Py_None;
-    //return Py_RETURN_NONE;
 }
 
 PyObject* _vec2d(T x, T y){
@@ -298,7 +297,6 @@ int main(){
     Py_Finalize();
 #endif
     return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
-    //return 0;
 }
 #endif
 
