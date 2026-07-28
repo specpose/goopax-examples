@@ -12,7 +12,7 @@ static const std::size_t _alignment = 4;
 static const std::array<std::size_t, 2> _shape = {4,2};
 static const Py_ssize_t expected_vec_dims = 2;
 
-#if DEBUG
+#ifndef NDEBUG
 #define Py_DECREF_bak Py_DECREF
 void __delete(PyObject* X){
     //int* refcnt = (int*)(X);
@@ -222,7 +222,7 @@ int main(){
     PyImport_AppendInittab("pynumpy", PyInit_pynumpy);
 #endif
     PyImport_AppendInittab("pylist", PyInit_pylist);
-#if DEBUG
+#ifndef NDEBUG
     PyInitConfig *config = PyInitConfig_Create();
     PyInitConfig_SetInt(config, "dev_mode", 1);
     Py_InitializeFromInitConfig(config);
@@ -290,17 +290,12 @@ int main(){
     long tR = PyLong_AsLong(PyObject_GetAttrString(result,"testsRun"));
 
     PyGILState_Release(gstate);
-#if DEBUG
-    if (Py_FinalizeEx() < 0)
-        abort();
-#else
-    Py_Finalize();
-#endif
-    return tR>0&&e==0&&f==0&&uS==0 ? 0 : 1;
+    int py_finalized = Py_FinalizeEx();
+    return tR>0&&e==0&&f==0&&uS==0&&py_finalized ? 0 : py_finalized;
 }
 #endif
 
-#if DEBUG
+#ifndef NDEBUG
 #undef Py_DECREF
 #define Py_DECREF Py_DECREF_bak;
 #endif
