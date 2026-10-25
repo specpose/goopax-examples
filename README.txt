@@ -49,12 +49,20 @@ Cross-Compiling for Android
 This build is using the cmake toolchain supplied by Google:
 https://developer.android.com/studio/projects/configure-cmake
 
+Set the ANDROID_NDK environment variable to the location of the Android NDK.
+
+    export ANDROID_NDK=$HOME/Android/Sdk/ndk/29.0.14206865
+
 Set the PATH variable so that both ninja and corresponding cmake are found.
 
     export PATH=$HOME/Android/Sdk/cmake/4.1.2/bin:$PATH
 
+Set the PATH variable so that the ndk toolchain is preferred.
+
+    export PATH=$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+
 Then run something like this:
 
-    build_type="release" ABI="arm64-v8a" platform_version_string="android-35" android_ndk="$HOME/Android/Sdk/ndk/29.0.14206865" bash -c './build-all.sh -G "Ninja" -DCMAKE_SYSTEM_NAME="Android" -DCMAKE_ANDROID_STL_TYPE="c++_static" -DANDROID_ABI="$ABI" -DANDROID_PLATFORM="$platform_version_string" -DANDROID_NDK="$android_ndk" -DCMAKE_TOOLCHAIN_FILE="$android_ndk/build/cmake/android.toolchain.cmake" -DCMAKE_FIND_ROOT_PATH="$PWD/../;$PWD/build/$build_type/$ABI/ext/opencv/sdk/native/jni;$PWD/build/$build_type/$ABI/ext/sdl3" -DGOOPAX_DRAW_WITH_OPENGL=0 -DGOOPAX_DRAW_WITH_METAL=0 -DGOOPAX_DRAW_WITH_VULKAN=1'
+    ./build-all.sh -G "Ninja" -DCMAKE_SYSTEM_NAME="Android" -DCMAKE_ANDROID_STL_TYPE="c++_static" -DANDROID_ABI="arm64-v8a" -DANDROID_PLATFORM="android-35" -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" -DCMAKE_FIND_ROOT_PATH="$PWD/../;$PWD/build/ext/eigen;$PWD/build/ext/glm;$PWD/build/ext/sdl3;$PWD/build/ext/build_boost-prefix/src/build_boost/include;$PWD/build/ext/opencv/sdk/native/jni" -DGOOPAX_DRAW_WITH_OPENGL=0 -DGOOPAX_DRAW_WITH_METAL=0 -DGOOPAX_DRAW_WITH_VULKAN=1
 
 For the graphical SDL-based example programs, shared libraries are created. They need to be further incorporated into an android app. For a simple test, (https://github.com/specpose/goopax-template-android) may be sufficient.
